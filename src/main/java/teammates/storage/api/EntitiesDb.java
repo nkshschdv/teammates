@@ -1,65 +1,57 @@
 package teammates.storage.api;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
-import javax.jdo.JDOHelper;
-import javax.jdo.PersistenceManager;
-import javax.jdo.PersistenceManagerFactory;
-
-import com.google.appengine.api.blobstore.BlobKey;
 import com.google.appengine.api.search.Document;
 import com.google.appengine.api.search.Results;
 import com.google.appengine.api.search.ScoredDocument;
 import com.google.appengine.api.search.SearchQueryException;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.LoadType;
+import com.googlecode.objectify.cmd.QueryKeys;
 
 import teammates.common.datatransfer.attributes.EntityAttributes;
 import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Assumption;
-import teammates.common.util.Config;
 import teammates.common.util.Const;
-import teammates.common.util.GoogleCloudStorageHelper;
 import teammates.common.util.Logger;
-import teammates.common.util.ThreadHelper;
+import teammates.storage.entity.BaseEntity;
 import teammates.storage.search.SearchDocument;
 import teammates.storage.search.SearchManager;
 import teammates.storage.search.SearchQuery;
 
 /**
  * Base class for all classes performing CRUD operations against the Datastore.
+ * @param <E> Specific entity class
+ * @param <A> Specific attributes class
  */
-public abstract class EntitiesDb {
+public abstract class EntitiesDb<E extends BaseEntity, A extends EntityAttributes<E>> {
 
     public static final String ERROR_CREATE_ENTITY_ALREADY_EXISTS = "Trying to create a %s that exists: ";
     public static final String ERROR_UPDATE_NON_EXISTENT = "Trying to update non-existent Entity: ";
     public static final String ERROR_UPDATE_NON_EXISTENT_ACCOUNT = "Trying to update non-existent Account: ";
-    public static final String ERROR_UPDATE_NON_EXISTENT_ADMIN_EMAIL = "Trying to update non-existent Admin Email: ";
     public static final String ERROR_UPDATE_NON_EXISTENT_STUDENT = "Trying to update non-existent Student: ";
     public static final String ERROR_UPDATE_NON_EXISTENT_STUDENT_PROFILE = "Trying to update non-existent Student Profile: ";
-    public static final String ERROR_UPDATE_NON_EXISTENT_COURSE = "Trying to update non-existent Course: ";
-    public static final String ERROR_UPDATE_NON_EXISTENT_INSTRUCTOR_PERMISSION =
-            "Trying to update non-existing InstructorPermission: ";
-    public static final String ERROR_UPDATE_TO_EXISTENT_INSTRUCTOR_PERMISSION =
-            "Trying to update to existent InstructorPermission: ";
-    public static final String ERROR_CREATE_INSTRUCTOR_ALREADY_EXISTS = "Trying to create a Instructor that exists: ";
-    public static final String ERROR_TRYING_TO_MAKE_NON_EXISTENT_ACCOUNT_AN_INSTRUCTOR =
-            "Trying to make an non-existent account an Instructor :";
 
-    private static final PersistenceManagerFactory PMF = JDOHelper.getPersistenceManagerFactory("transactions-optional");
-    private static final ThreadLocal<PersistenceManager> PER_THREAD_PM = new ThreadLocal<PersistenceManager>();
-    private static final Logger log = Logger.getLogger();
+    protected static final Logger log = Logger.getLogger();
 
     /**
      * Preconditions:
      * <br> * {@code entityToAdd} is not null and has valid data.
      */
-    public Object createEntity(EntityAttributes entityToAdd)
-            throws InvalidParametersException, EntityAlreadyExistsException {
+    public E createEntity(A entityToAdd) throws InvalidParametersException, EntityAlreadyExistsException {
+        return createEntity(entityToAdd, true);
+    }
 
-        Assumption.assertNotNull(
-                Const.StatusCodes.DBLEVEL_NULL_INPUT, entityToAdd);
+    private E createEntity(A entityToAdd, boolean shouldCheckExistence)
+            throws InvalidParametersException, EntityAlreadyExistsException {
+        Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entityToAdd);
 
         entityToAdd.sanitizeForSaving();
 
@@ -69,50 +61,27 @@ public abstract class EntitiesDb {
 
         // TODO: Do we really need special identifiers? Can just use ToString()?
         // Answer: Yes. We can use toString.
-        if (hasEntity(entityToAdd)) {
+        if (shouldCheckExistence && hasEntity(entityToAdd)) {
             String error = String.format(ERROR_CREATE_ENTITY_ALREADY_EXISTS, entityToAdd.getEntityTypeAsString())
                     + entityToAdd.getIdentificationString();
             log.info(error);
             throw new EntityAlreadyExistsException(error);
         }
 
-        Object entity = entityToAdd.toEntity();
-        getPm().makePersistent(entity);
-        getPm().flush();
+        E entity = entityToAdd.toEntity();
 
-        // Wait for the operation to persist
-        int elapsedTime = 0;
-        if (Config.PERSISTENCE_CHECK_DURATION > 0) {
-            while (!hasEntity(entityToAdd)
-                   && elapsedTime < Config.PERSISTENCE_CHECK_DURATION) {
-                ThreadHelper.waitBriefly();
-                //check before incrementing to avoid boundary case problem
-                if (!hasEntity(entityToAdd)) {
-                    elapsedTime += ThreadHelper.WAIT_DURATION;
-                }
-            }
-            if (elapsedTime >= Config.PERSISTENCE_CHECK_DURATION) {
-                log.info("Operation did not persist in time: create"
-                        + entityToAdd.getEntityTypeAsString() + "->"
-                        + entityToAdd.getIdentificationString());
-            }
-        }
-
-        log.info(entityToAdd.getBackupIdentifier());
+        saveEntity(entity, entityToAdd);
 
         return entity;
     }
 
-    public List<EntityAttributes> createEntities(Collection<? extends EntityAttributes> entitiesToAdd)
-            throws InvalidParametersException {
+    public List<A> createEntities(Collection<A> entitiesToAdd) throws InvalidParametersException {
+        Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entitiesToAdd);
 
-        Assumption.assertNotNull(
-                Const.StatusCodes.DBLEVEL_NULL_INPUT, entitiesToAdd);
+        List<A> entitiesToUpdate = new ArrayList<>();
+        List<E> entities = new ArrayList<>();
 
-        List<EntityAttributes> entitiesToUpdate = new ArrayList<EntityAttributes>();
-        List<Object> entities = new ArrayList<Object>();
-
-        for (EntityAttributes entityToAdd : entitiesToAdd) {
+        for (A entityToAdd : entitiesToAdd) {
             entityToAdd.sanitizeForSaving();
 
             if (!entityToAdd.isValid()) {
@@ -122,17 +91,54 @@ public abstract class EntitiesDb {
             if (hasEntity(entityToAdd)) {
                 entitiesToUpdate.add(entityToAdd);
             } else {
-                entities.add(entityToAdd.toEntity());
+                E entity = entityToAdd.toEntity();
+                entities.add(entity);
             }
-
-            log.info(entityToAdd.getBackupIdentifier());
         }
 
-        getPm().makePersistentAll(entities);
-        getPm().flush();
+        saveEntities(entities, entitiesToAdd);
 
         return entitiesToUpdate;
+    }
 
+    /**
+     * Creates multiple entities without checking for existence. Also calls {@link #flush()},
+     * leading to any previously deferred operations being written immediately.
+     *
+     * @return list of created entities.
+     */
+    public List<E> createEntitiesWithoutExistenceCheck(Collection<A> entitiesToAdd) throws InvalidParametersException {
+        List<E> createdEntities = createEntitiesDeferred(entitiesToAdd);
+        flush();
+        return createdEntities;
+    }
+
+    /**
+     * Queues creation of multiple entities. No actual writes are done until {@link #flush()} is called.
+     * Note that there is no check for existence - existing entities will be overwritten.
+     * If multiple entities with the same key are queued, only the last one queued will be created.
+     *
+     * @return list of created entities.
+     */
+    public List<E> createEntitiesDeferred(Collection<A> entitiesToAdd) throws InvalidParametersException {
+        Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entitiesToAdd);
+
+        List<E> entities = new ArrayList<>();
+
+        for (A entityToAdd : entitiesToAdd) {
+            entityToAdd.sanitizeForSaving();
+
+            if (!entityToAdd.isValid()) {
+                throw new InvalidParametersException(entityToAdd.getInvalidityInfo());
+            }
+
+            E entity = entityToAdd.toEntity();
+            entities.add(entity);
+        }
+
+        saveEntitiesDeferred(entities, entitiesToAdd);
+
+        return entities;
     }
 
     /**
@@ -141,132 +147,147 @@ public abstract class EntitiesDb {
      * Preconditions:
      * <br> * {@code entityToAdd} is not null and has valid data.
      */
-    public Object createEntityWithoutExistenceCheck(EntityAttributes entityToAdd)
-            throws InvalidParametersException {
-
-        Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entityToAdd);
-
-        entityToAdd.sanitizeForSaving();
-
-        if (!entityToAdd.isValid()) {
-            throw new InvalidParametersException(entityToAdd.getInvalidityInfo());
+    public E createEntityWithoutExistenceCheck(A entityToAdd) throws InvalidParametersException {
+        try {
+            return createEntity(entityToAdd, false);
+        } catch (EntityAlreadyExistsException e) {
+            Assumption.fail("Caught exception thrown by existence check even with existence check disabled");
+            return null;
         }
+    }
 
-        Object entity = entityToAdd.toEntity();
-        getPm().makePersistent(entity);
-        getPm().flush();
+    public void saveEntity(E entityToSave) {
+        Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entityToSave);
 
-        // Wait for the operation to persist
-        if (Config.PERSISTENCE_CHECK_DURATION > 0) {
-            int elapsedTime = 0;
-            while (!hasEntity(entityToAdd)
-                   && elapsedTime < Config.PERSISTENCE_CHECK_DURATION) {
-                ThreadHelper.waitBriefly();
-                //check before incrementing to avoid boundary case problem
-                if (!hasEntity(entityToAdd)) {
-                    elapsedTime += ThreadHelper.WAIT_DURATION;
-                }
-            }
-            if (elapsedTime >= Config.PERSISTENCE_CHECK_DURATION) {
-                log.info("Operation did not persist in time: create"
-                         + entityToAdd.getEntityTypeAsString() + "->"
-                         + entityToAdd.getIdentificationString());
-            }
+        saveEntity(entityToSave, makeAttributes(entityToSave));
+    }
+
+    protected void saveEntity(E entityToSave, A entityToSaveAttributesForLogging) {
+        ofy().save().entity(entityToSave).now();
+        log.info(entityToSaveAttributesForLogging.getBackupIdentifier());
+    }
+
+    protected void saveEntities(Collection<E> entitiesToSave) {
+        saveEntities(entitiesToSave, makeAttributes(entitiesToSave));
+    }
+
+    protected void saveEntities(Collection<E> entitiesToSave, Collection<A> entitiesToSaveAttributesForLogging) {
+        for (A attributes : entitiesToSaveAttributesForLogging) {
+            log.info(attributes.getBackupIdentifier());
         }
-        log.info(entityToAdd.getBackupIdentifier());
+        ofy().save().entities(entitiesToSave).now();
+    }
 
-        return entity;
+    protected void saveEntitiesDeferred(Collection<E> entitiesToSave, Collection<A> entitiesToSaveAttributesForLogging) {
+        for (A attributes : entitiesToSaveAttributesForLogging) {
+            log.info(attributes.getBackupIdentifier());
+        }
+        ofy().defer().save().entities(entitiesToSave);
+    }
+
+    public static void flush() {
+        ofy().flush();
     }
 
     // TODO: use this method for subclasses.
     /**
      * Note: This is a non-cascade delete.<br>
      *   <br> Fails silently if there is no such object.
-     * <br> Preconditions:
-     * <br> * {@code courseId} is not null.
      */
-    public void deleteEntity(EntityAttributes entityToDelete) {
+    public void deleteEntity(A entityToDelete) {
         Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entityToDelete);
 
-        getEntityKeyOnlyQuery(entityToDelete)
-            .deletePersistentAll();
-
-        // wait for the operation to persist
-        if (Config.PERSISTENCE_CHECK_DURATION > 0) {
-            int elapsedTime = 0;
-            boolean isEntityDeleted = !hasEntity(entityToDelete);
-            while (!isEntityDeleted
-                    && elapsedTime < Config.PERSISTENCE_CHECK_DURATION) {
-                ThreadHelper.waitBriefly();
-
-                isEntityDeleted = !hasEntity(entityToDelete);
-                //check before incrementing to avoid boundary case problem
-                if (!isEntityDeleted) {
-                    elapsedTime += ThreadHelper.WAIT_DURATION;
-                }
-            }
-            if (elapsedTime >= Config.PERSISTENCE_CHECK_DURATION) {
-                log.info("Operation did not persist in time: delete"
-                        + entityToDelete.getEntityTypeAsString() + "->"
-                        + entityToDelete.getIdentificationString());
-            }
-        }
+        ofy().delete().keys(getEntityQueryKeys(entityToDelete)).now();
         log.info(entityToDelete.getBackupIdentifier());
     }
 
-    public void deleteEntities(Collection<? extends EntityAttributes> entitiesToDelete) {
-
+    public void deleteEntities(Collection<A> entitiesToDelete) {
         Assumption.assertNotNull(Const.StatusCodes.DBLEVEL_NULL_INPUT, entitiesToDelete);
-        for (EntityAttributes entityToDelete : entitiesToDelete) {
+
+        List<Key<E>> keysToDelete = new ArrayList<>();
+        for (A entityToDelete : entitiesToDelete) {
+            Key<E> keyToDelete = getEntityQueryKeys(entityToDelete).first().now();
+            if (keyToDelete == null) {
+                continue;
+            }
+            keysToDelete.add(keyToDelete);
             log.info(entityToDelete.getBackupIdentifier());
-            getEntityKeyOnlyQuery(entityToDelete)
-                .deletePersistentAll();
         }
+
+        ofy().delete().keys(keysToDelete).now();
     }
 
-    public void commitOutstandingChanges() {
-        closePm();
+    protected void deleteEntityDirect(E entityToDelete) {
+        deleteEntityDirect(entityToDelete, makeAttributes(entityToDelete));
     }
 
-    protected void closePm() {
-        if (!getPm().isClosed()) {
-            getPm().close();
+    protected void deleteEntityDirect(E entityToDelete, A entityToDeleteAttributesForLogging) {
+        ofy().delete().entity(entityToDelete).now();
+        log.info(entityToDeleteAttributesForLogging.getBackupIdentifier());
+    }
+
+    protected void deleteEntitiesDirect(Collection<E> entitiesToDelete, Collection<A> entitiesToDeleteAttributesForLogging) {
+        for (A attributes : entitiesToDeleteAttributesForLogging) {
+            log.info(attributes.getBackupIdentifier());
         }
+        ofy().delete().entities(entitiesToDelete).now();
     }
 
-    public void deletePicture(BlobKey key) {
-        GoogleCloudStorageHelper.deleteFile(key);
-    }
+    protected abstract LoadType<E> load();
 
     /**
-     * NOTE: This method must be overriden for all subclasses such that it will return the Entity
-     * matching the EntityAttributes in the parameter.
+     * NOTE: This method must be overriden for all subclasses such that it will return the
+     * Entity matching the EntityAttributes in the parameter.
      * @return    the Entity which matches the given {@link EntityAttributes} {@code attributes}
-     *             based on the default key identifiers. Returns null if it
-     *             does not already exist in the Datastore.
+     *             based on the default key identifiers.
      */
-    protected abstract Object getEntity(EntityAttributes attributes);
+    protected abstract E getEntity(A attributes);
 
-    protected abstract QueryWithParams getEntityKeyOnlyQuery(EntityAttributes attributes);
+    /**
+     * NOTE: This method must be overriden for all subclasses such that it will return the key query for the
+     * Entity matching the EntityAttributes in the parameter.
+     * @return    the key query for the Entity which matches the given {@link EntityAttributes} {@code attributes}
+     *             based on the default key identifiers.
+     */
+    protected abstract QueryKeys<E> getEntityQueryKeys(A attributes);
 
-    public boolean hasEntity(EntityAttributes attributes) {
-        QueryWithParams q = getEntityKeyOnlyQuery(attributes);
-        List<?> results = q.execute();
-        return !results.isEmpty();
+    public boolean hasEntity(A attributes) {
+        return getEntityQueryKeys(attributes).first().now() != null;
     }
 
-    protected PersistenceManager getPm() {
-        PersistenceManager pm = PER_THREAD_PM.get();
-        if (pm != null && !pm.isClosed()) {
-            return pm;
-        }
+    protected abstract A makeAttributes(E entity);
 
-        if (pm != null && pm.isClosed()) {
-            PER_THREAD_PM.remove();
+    protected List<A> makeAttributes(Collection<E> entities) {
+        List<A> attributes = new LinkedList<>();
+        for (E entity : entities) {
+            attributes.add(makeAttributes(entity));
         }
-        pm = PMF.getPersistenceManager();
-        PER_THREAD_PM.set(pm);
-        return pm;
+        return attributes;
+    }
+
+    protected A makeAttributesOrNull(E entity) {
+        return makeAttributesOrNull(entity, null);
+    }
+
+    protected A makeAttributesOrNull(E entity, String logMessage) {
+        if (entity != null) {
+            return makeAttributes(entity);
+        }
+        if (logMessage != null) {
+            log.info(logMessage);
+        }
+        return null;
+    }
+
+    protected Key<E> makeKeyOrNullFromWebSafeString(String webSafeString) {
+        if (webSafeString == null) {
+            return null;
+        }
+        try {
+            return Key.create(webSafeString);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     //the followings APIs are used by Teammates' search engine
@@ -279,7 +300,7 @@ public abstract class EntitiesDb {
     }
 
     protected void putDocuments(String indexName, List<SearchDocument> documents) {
-        List<Document> searchDocuments = new ArrayList<Document>();
+        List<Document> searchDocuments = new ArrayList<>();
         for (SearchDocument document : documents) {
             searchDocuments.add(document.build());
         }

@@ -8,6 +8,7 @@ import com.google.appengine.api.log.AppLogLine;
 /**
  * A log entry to describe an action carried out by the app.
  */
+@Deprecated
 public final class ActivityLogEntry {
     // The following constants describe the positions of the attributes
     // in the log message. i.e
@@ -64,7 +65,7 @@ public final class ActivityLogEntry {
     public String generateLogMessage() {
         // TEAMMATESLOG|||SERVLET_NAME|||ACTION|||TO_SHOW|||ROLE|||NAME|||GOOGLE_ID|||EMAIL|||MESSAGE(IN HTML)|||URL|||ID
         String userRoleSuffix = isMasqueradeUserRole ? Const.ActivityLog.ROLE_MASQUERADE_POSTFIX : "";
-        return StringHelper.join(Const.ActivityLog.FIELD_SEPARATOR, Const.ActivityLog.TEAMMATESLOG,
+        return String.join(Const.ActivityLog.FIELD_SEPARATOR, Const.ActivityLog.TEAMMATESLOG,
                 actionName, actionResponse, Boolean.toString(shouldShowLog), userRole + userRoleSuffix,
                 userName, userGoogleId, userEmail, logMessage, actionUrl, logId);
     }
@@ -285,7 +286,6 @@ public final class ActivityLogEntry {
         }
 
         // use builder to build ActivityLogEntry
-        @SuppressWarnings({"PMD.AccessorMethodGeneration", "PMD.AccessorClassGeneration"})
         public ActivityLogEntry build() {
             ActivityLogEntry entry = new ActivityLogEntry();
 

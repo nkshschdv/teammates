@@ -1,171 +1,89 @@
 package teammates.client.scripts;
 
 import java.io.IOException;
-import java.util.List;
 
-import teammates.client.remoteapi.RemoteApiClient;
-import teammates.common.datatransfer.attributes.StudentAttributes;
-import teammates.common.exception.EntityDoesNotExistException;
-import teammates.common.exception.InvalidParametersException;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
+
 import teammates.common.util.SanitizationHelper;
-import teammates.logic.core.StudentsLogic;
-import teammates.storage.api.StudentsDb;
+import teammates.storage.entity.CourseStudent;
 
-public class DataMigrationForSanitizedDataInStudentAttributes extends RemoteApiClient {
-    private static final boolean isPreview = true;
-    private StudentsDb studentsDb = new StudentsDb();
-    private StudentsLogic studentsLogic = StudentsLogic.inst();
-    private int numberOfSanitizedEmail;
-    private int numberOfSanitizedGoogleId;
+/**
+ * Script to desanitize content of {@link CourseStudent} if it is sanitized.
+ */
+public class DataMigrationForSanitizedDataInStudentAttributes
+        extends DataMigrationEntitiesBaseScript<CourseStudent> {
+
+    public DataMigrationForSanitizedDataInStudentAttributes() {
+        numberOfScannedKey.set(0L);
+        numberOfAffectedEntities.set(0L);
+        numberOfUpdatedEntities.set(0L);
+    }
 
     public static void main(String[] args) throws IOException {
-        DataMigrationForSanitizedDataInStudentAttributes migrator = new DataMigrationForSanitizedDataInStudentAttributes();
+        DataMigrationForSanitizedDataInStudentAttributes migrator =
+                new DataMigrationForSanitizedDataInStudentAttributes();
         migrator.doOperationRemotely();
     }
 
     @Override
-    protected void doOperation() {
-        List<StudentAttributes> allStudents = getAllStudents();
-        if (isPreview) {
-            System.out.println("Checking Sanitization for students...");
-        }
-        int numberOfAffectedStudents = 0;
-        numberOfSanitizedEmail = 0;
-        numberOfSanitizedGoogleId = 0;
-        for (StudentAttributes student : allStudents) {
-            if (isPreview) {
-                if (previewSanitizedDataForStudent(student)) {
-                    numberOfAffectedStudents++;
-                }
-            } else {
-                fixSanitizedDataForStudent(student);
-            }
-        }
-        if (isPreview) {
-            System.out.println("There are/is " + this.numberOfSanitizedEmail + " sanitized email(s)!");
-            System.out.println("There are/is " + this.numberOfSanitizedGoogleId + " sanitized Google Id(s)!");
-            System.out.println("There are/is " + numberOfAffectedStudents + " student(s) with sanitized data!");
-        } else {
-            System.out.println("Sanitization fixing done!");
-        }
+    protected Query<CourseStudent> getFilterQuery() {
+        return ofy().load().type(CourseStudent.class);
     }
 
-    private boolean previewSanitizedDataForStudent(StudentAttributes student) {
-        boolean hasSanitizedData = checkStudentHasSanitizedData(student);
-        if (hasSanitizedData) {
-            System.out.println("Checking student having email: " + student.email);
+    @Override
+    protected boolean isPreview() {
+        return true;
+    }
 
-            if (isSanitizedString(student.comments)) {
-                System.out.println("comments: " + student.comments);
-                System.out.println("new comments: " + fixSanitization(student.comments));
-            }
-            if (isSanitizedString(student.course)) {
-                System.out.println("course: " + student.course);
-                System.out.println("new course: " + fixSanitization(student.course));
-            }
-            if (isSanitizedString(student.email)) {
-                numberOfSanitizedEmail++;
-                System.out.println("email: " + student.email);
-                System.out.println("new email: " + fixSanitization(student.email));
-            }
-            if (isSanitizedString(student.googleId)) {
-                numberOfSanitizedGoogleId++;
-                System.out.println("googleId: " + student.googleId);
-                System.out.println("new googleId: " + fixSanitization(student.googleId));
-            }
-            if (isSanitizedString(student.lastName)) {
-                System.out.println("lastName: " + student.lastName);
-                System.out.println("new lastName: " + fixSanitization(student.lastName));
-            }
-            if (isSanitizedString(student.name)) {
-                System.out.println("name: " + student.name);
-                System.out.println("new name: " + fixSanitization(student.name));
-            }
-            if (isSanitizedString(student.section)) {
-                System.out.println("section: " + student.section);
-                System.out.println("new section: " + fixSanitization(student.section));
-            }
-            if (isSanitizedString(student.team)) {
-                System.out.println("team: " + student.team);
-                System.out.println("new team: " + fixSanitization(student.team));
-            }
-            System.out.println();
+    @Override
+    protected String getLastPositionOfCursor() {
+        return "";
+    }
+
+    @Override
+    protected int getCursorInformationPrintCycle() {
+        return 100;
+    }
+
+    @Override
+    protected boolean isMigrationNeeded(Key<CourseStudent> key) throws Exception {
+        CourseStudent student = ofy().load().key(key).now();
+
+        if (SanitizationHelper.isSanitizedHtml(student.getCourseId())) {
+            System.err.println(String.format("Student %s has unsanitized courseId %s, this should not happen",
+                    student.getUniqueId(), student.getCourseId()));
         }
-        return hasSanitizedData;
-    }
-
-    private boolean isSanitizedString(String s) {
-        if (s == null) {
-            return false;
+        if (SanitizationHelper.isSanitizedHtml(student.getEmail())) {
+            System.err.println(String.format("Student %s has unsanitized email %s, this should not happen",
+                    student.getUniqueId(), student.getEmail()));
         }
-        if (s.indexOf('<') >= 0 || s.indexOf('>') >= 0 || s.indexOf('\"') >= 0
-                || s.indexOf('/') >= 0 || s.indexOf('\'') >= 0) {
-            return false;
-        } else if (s.indexOf("&lt;") >= 0 || s.indexOf("&gt;") >= 0 || s.indexOf("&quot;") >= 0
-                   || s.indexOf("&#x2f;") >= 0 || s.indexOf("&#39;") >= 0 || s.indexOf("&amp;") >= 0) {
-            return true;
+        if (SanitizationHelper.isSanitizedHtml(student.getGoogleId())) {
+            System.err.println(String.format("Student %s has unsanitized googleId %s, this should not happen",
+                    student.getUniqueId(), student.getGoogleId()));
         }
-        return false;
-    }
-
-    private String fixSanitization(String s) {
-        if (isSanitizedString(s)) {
-            return SanitizationHelper.desanitizeFromHtml(s);
+        if (SanitizationHelper.isSanitizedHtml(student.getSectionName())) {
+            System.err.println(String.format("Student %s has unsanitized sectionName %s, this should not happen",
+                    student.getUniqueId(), student.getSectionName()));
         }
-        return s;
-    }
-
-    private boolean checkStudentHasSanitizedData(StudentAttributes student) {
-        return isSanitizedString(student.comments) || isSanitizedString(student.course)
-               || isSanitizedString(student.email) || isSanitizedString(student.googleId)
-               || isSanitizedString(student.lastName) || isSanitizedString(student.name)
-               || isSanitizedString(student.section) || isSanitizedString(student.team);
-    }
-
-    private void fixSanitizationForStudent(StudentAttributes student) {
-        student.comments = fixSanitization(student.comments);
-        student.course = fixSanitization(student.course);
-        student.email = fixSanitization(student.email);
-        student.googleId = fixSanitization(student.googleId);
-        student.lastName = fixSanitization(student.lastName);
-        student.name = fixSanitization(student.name);
-        student.section = fixSanitization(student.section);
-        student.team = fixSanitization(student.team);
-    }
-
-    private void fixSanitizedDataForStudent(StudentAttributes student) {
-        try {
-            boolean hasSanitizedData = checkStudentHasSanitizedData(student);
-            if (hasSanitizedData) {
-                fixSanitizationForStudent(student);
-                updateStudent(student.email, student);
-            }
-        } catch (InvalidParametersException e) {
-            System.out.println("Student " + student.email + " invalid!");
-            e.printStackTrace();
-        } catch (EntityDoesNotExistException e) {
-            System.out.println("Student " + student.email + " does not exist!");
-            e.printStackTrace();
-        }
-    }
-
-    protected List<StudentAttributes> getAllStudents() {
-        return studentsLogic.getAllStudents();
-    }
-
-    private void updateStudent(String originalEmail, StudentAttributes student) throws InvalidParametersException,
-                                                                                      EntityDoesNotExistException {
-        studentsDb.verifyStudentExists(student.course, originalEmail);
-        StudentAttributes originalStudent = studentsLogic.getStudentForEmail(student.course, originalEmail);
-
-        // prepare new student
-        student.updateWithExistingRecord(originalStudent);
-
-        if (!student.isValid()) {
-            throw new InvalidParametersException(student.getInvalidityInfo());
+        if (SanitizationHelper.isSanitizedHtml(student.getTeamName())) {
+            System.err.println(String.format("Student %s has unsanitized teamName %s, this should not happen",
+                    student.getUniqueId(), student.getTeamName()));
         }
 
-        studentsDb.updateStudent(student.course, originalEmail, student.name, student.team, student.section,
-                                 student.email, student.googleId, student.comments, true);
+        return SanitizationHelper.isSanitizedHtml(student.getComments())
+                || SanitizationHelper.isSanitizedHtml(student.getLastName())
+                || SanitizationHelper.isSanitizedHtml(student.getName());
+    }
+
+    @Override
+    protected void migrateEntity(Key<CourseStudent> key) throws Exception {
+        CourseStudent student = ofy().load().key(key).now();
+
+        student.setComments(SanitizationHelper.desanitizeIfHtmlSanitized(student.getComments()));
+        student.setName(SanitizationHelper.desanitizeIfHtmlSanitized(student.getName()));
+        student.setLastName(SanitizationHelper.desanitizeIfHtmlSanitized(student.getLastName()));
+
+        ofy().save().entity(student).now();
     }
 }

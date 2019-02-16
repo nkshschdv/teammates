@@ -5,7 +5,6 @@ import org.testng.annotations.Test;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.util.Const;
 import teammates.test.driver.AssertHelper;
-import teammates.test.driver.Priority;
 import teammates.ui.controller.InstructorStudentListPageAction;
 import teammates.ui.controller.ShowPageResult;
 import teammates.ui.pagedata.InstructorStudentListPageData;
@@ -13,9 +12,6 @@ import teammates.ui.pagedata.InstructorStudentListPageData;
 /**
  * SUT: {@link InstructorStudentListPageAction}.
  */
-// Priority added due to conflict between InstructorStudentListPageActionTest,
-// StudentHomePageActionTest, and StudentCommentsPageActionTest.
-@Priority(-3)
 public class InstructorStudentListPageActionTest extends BaseActionTest {
 
     @Override
@@ -26,7 +22,7 @@ public class InstructorStudentListPageActionTest extends BaseActionTest {
     @Override
     @Test
     public void testExecuteAndPostProcess() {
-        InstructorAttributes instructor = dataBundle.instructors.get("instructor3OfCourse1");
+        InstructorAttributes instructor = typicalBundle.instructors.get("instructor3OfCourse1");
         String instructorId = instructor.googleId;
 
         String[] submissionParams = new String[] {
@@ -57,7 +53,7 @@ public class InstructorStudentListPageActionTest extends BaseActionTest {
 
         ______TS("No courses");
 
-        instructorId = dataBundle.accounts.get("instructorWithoutCourses").googleId;
+        instructorId = typicalBundle.accounts.get("instructorWithoutCourses").googleId;
 
         gaeSimulation.loginAsInstructor(instructorId);
         a = getAction(submissionParams);
@@ -78,7 +74,7 @@ public class InstructorStudentListPageActionTest extends BaseActionTest {
                            + "|||/page/instructorStudentListPage";
         AssertHelper.assertLogMessageEquals(expectedLogMessage, a.getLogMessage());
 
-        instructor = dataBundle.instructors.get("instructorOfArchivedCourse");
+        instructor = typicalBundle.instructors.get("instructorOfArchivedCourse");
         instructorId = instructor.googleId;
 
         ______TS("Archived course, not displayed");
@@ -136,13 +132,13 @@ public class InstructorStudentListPageActionTest extends BaseActionTest {
 
     @Override
     protected InstructorStudentListPageAction getAction(String... params) {
-        return (InstructorStudentListPageAction) gaeSimulation.getActionObject(getActionUri(), params);
+        return (InstructorStudentListPageAction) gaeSimulation.getLegacyActionObject(getActionUri(), params);
     }
 
     @Override
     @Test
     protected void testAccessControl() throws Exception {
-        String[] submissionParams = new String[]{};
+        String[] submissionParams = new String[] {};
         verifyOnlyInstructorsCanAccess(submissionParams);
     }
 

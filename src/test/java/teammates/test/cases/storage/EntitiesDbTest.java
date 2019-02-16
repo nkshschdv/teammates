@@ -3,6 +3,8 @@ package teammates.test.cases.storage;
 import static teammates.common.util.FieldValidator.COURSE_ID_ERROR_MESSAGE;
 import static teammates.common.util.FieldValidator.REASON_INCORRECT_FORMAT;
 
+import java.time.ZoneId;
+
 import org.testng.annotations.Test;
 
 import teammates.common.datatransfer.attributes.CourseAttributes;
@@ -30,45 +32,39 @@ public class EntitiesDbTest extends BaseComponentTestCase {
          */
 
         ______TS("success: typical case");
-        CourseAttributes c = new CourseAttributes("Computing101-fresh", "Basic Computing", "UTC");
+        CourseAttributes c = CourseAttributes
+                .builder("Computing101-fresh", "Basic Computing", ZoneId.of("UTC"))
+                .build();
         coursesDb.deleteCourse(c.getId());
         verifyAbsentInDatastore(c);
         coursesDb.createEntity(c);
         verifyPresentInDatastore(c);
 
         ______TS("fails: entity already exists");
-        try {
-            coursesDb.createEntity(c);
-            signalFailureToDetectException();
-        } catch (EntityAlreadyExistsException e) {
-            AssertHelper.assertContains(String.format(CoursesDb.ERROR_CREATE_ENTITY_ALREADY_EXISTS,
-                                                      c.getEntityTypeAsString())
-                                                + c.getIdentificationString(),
-                                        e.getMessage());
-        }
+        EntityAlreadyExistsException eaee = assertThrows(EntityAlreadyExistsException.class,
+                () -> coursesDb.createEntity(c));
+        AssertHelper.assertContains(String.format(CoursesDb.ERROR_CREATE_ENTITY_ALREADY_EXISTS,
+                c.getEntityTypeAsString())
+                        + c.getIdentificationString(),
+                eaee.getMessage());
         coursesDb.deleteEntity(c);
 
         ______TS("fails: invalid parameters");
-        CourseAttributes invalidCourse = new CourseAttributes("invalid id spaces", "Basic Computing", "UTC");
-        try {
-            coursesDb.createEntity(invalidCourse);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            AssertHelper.assertContains(
-                    getPopulatedErrorMessage(
+        CourseAttributes invalidCourse = CourseAttributes
+                .builder("invalid id spaces", "Basic Computing", ZoneId.of("UTC"))
+                .build();
+        InvalidParametersException ipe = assertThrows(InvalidParametersException.class,
+                () -> coursesDb.createEntity(invalidCourse));
+        AssertHelper.assertContains(
+                getPopulatedErrorMessage(
                         COURSE_ID_ERROR_MESSAGE, invalidCourse.getId(),
                         FieldValidator.COURSE_ID_FIELD_NAME, REASON_INCORRECT_FORMAT,
                         FieldValidator.COURSE_ID_MAX_LENGTH),
-                    e.getMessage());
-        }
+                ipe.getMessage());
 
         ______TS("fails: null parameter");
-        try {
-            coursesDb.createEntity(null);
-            signalFailureToDetectException();
-        } catch (AssertionError ae) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> coursesDb.createEntity(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
     }
 
 }

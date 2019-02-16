@@ -1,5 +1,7 @@
 package teammates.test.pageobjects;
 
+import teammates.e2e.pageobjects.Browser;
+
 public abstract class LoginPage extends AppPage {
 
     public LoginPage(Browser browser) {
@@ -7,6 +9,8 @@ public abstract class LoginPage extends AppPage {
     }
 
     public abstract InstructorHomePage loginAsInstructor(String username, String password);
+
+    public abstract <T extends AppPage> T loginAsInstructor(String username, String password, Class<T> typeOfPage);
 
     public abstract AppPage loginAsInstructorUnsuccessfully(String userName, String password);
 

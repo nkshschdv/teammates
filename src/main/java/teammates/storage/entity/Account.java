@@ -1,47 +1,39 @@
 package teammates.storage.entity;
 
-import java.util.Date;
+import java.time.Instant;
 
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.annotation.Translate;
 
 /**
  * Represents a unique user in the system.
  */
-@PersistenceCapable
-public class Account extends Entity {
+@Entity
+@Index
+public class Account extends BaseEntity {
 
-    /**
-     * The name of the primary key of this entity type.
-     */
-    @NotPersistent
-    public static final String PRIMARY_KEY_NAME = getFieldWithPrimaryKeyAnnotation(Account.class);
-
-    @PrimaryKey
-    @Persistent
+    @Id
     private String googleId;
 
-    @Persistent
     private String name;
 
-    @Persistent
     private boolean isInstructor;
 
-    @Persistent
     private String email;
 
-    @Persistent
     private String institute;
 
-    @Persistent
-    private Date createdAt;
+    @Translate(InstantTranslatorFactory.class)
+    private Instant createdAt;
 
-    @Persistent(dependent = "true", defaultFetchGroup = "false")
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
-    private StudentProfile studentProfile;
+    // TODO remove studentProfile attribute in Datastore
+
+    @SuppressWarnings("unused")
+    private Account() {
+        // required by Objectify
+    }
 
     /**
      * Instantiates a new account.
@@ -56,24 +48,15 @@ public class Account extends Entity {
      *            The official email of the user.
      * @param institute
      *            The university/school/institute e.g., "Abrons State University, Alaska"
-     * @param studentProfile
-     *            It is a StudentProfile object that contains all the attributes
-     *            of a student profile
      */
     public Account(String googleId, String name, boolean isInstructor,
-            String email, String institute, StudentProfile studentProfile) {
+            String email, String institute) {
         this.setGoogleId(googleId);
         this.setName(name);
         this.setIsInstructor(isInstructor);
         this.setEmail(email);
         this.setInstitute(institute);
-        this.setCreatedAt(new Date());
-        this.setStudentProfile(studentProfile);
-    }
-
-    public Account(String googleId, String name, boolean isInstructor,
-            String email, String institute) {
-        this(googleId, name, isInstructor, email, institute, new StudentProfile(googleId));
+        this.setCreatedAt(Instant.now());
     }
 
     public String getGoogleId() {
@@ -116,20 +99,11 @@ public class Account extends Entity {
         this.institute = institute;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public StudentProfile getStudentProfile() {
-        return this.studentProfile;
-    }
-
-    public void setStudentProfile(StudentProfile studentProfile) {
-        this.studentProfile = studentProfile;
-
     }
 }

@@ -1,16 +1,15 @@
 package teammates.storage.entity;
 
-import java.util.Date;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
-
 import com.google.appengine.api.datastore.Text;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.annotation.Translate;
+import com.googlecode.objectify.annotation.Unindex;
 
 import teammates.common.datatransfer.FeedbackParticipantType;
 import teammates.common.util.SanitizationHelper;
@@ -18,95 +17,92 @@ import teammates.common.util.SanitizationHelper;
 /**
  * An association class that represents the association
  * Giver --> [comments about] --> FeedbackResponse.
- * Currently giver is restricted only to Instructors.
+ * Giver can be a student or an instructor or a team
  */
-@PersistenceCapable
-public class FeedbackResponseComment extends Entity {
+@Entity
+@Index
+public class FeedbackResponseComment extends BaseEntity {
 
-    /**
-     * The name of the primary key of this entity type.
-     */
-    @NotPersistent
-    public static final String PRIMARY_KEY_NAME = getFieldWithPrimaryKeyAnnotation(FeedbackResponseComment.class);
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
+    @Id
     private transient Long feedbackResponseCommentId;
 
     /** The foreign key to locate the Course object. */
-    @Persistent
     private String courseId;
 
     /** The foreign key to locate the FeedbackSession object. */
-    @Persistent
     private String feedbackSessionName;
 
     /** The foreign key to locate the FeedbackQuestion object. */
-    @Persistent
     private String feedbackQuestionId;
 
-    /** The course-specific email used by the giver of the comment. */
-    @Persistent
+    /** The giver of the comment.
+     * It is email in case when comment giver is a student or instructor, and team name in case of team. */
     private String giverEmail;
 
+    /** Role of a comment giver.
+     * Can only be INSTRUCTORS, STUDENTS or TEAMS. */
+    private FeedbackParticipantType commentGiverType;
+
     /** The foreign key to locate the FeedbackResponse object commented on. */
-    @Persistent
     private String feedbackResponseId;
 
-    /* Response giver section */
-    @Persistent
+    /** Response giver section. */
     private String giverSection;
 
-    /* Response receiver section */
-    @Persistent
+    /** Response receiver section. */
     private String receiverSection;
 
-    @Persistent
-    private List<FeedbackParticipantType> showCommentTo;
+    private List<FeedbackParticipantType> showCommentTo = new ArrayList<>();
 
-    @Persistent
-    private List<FeedbackParticipantType> showGiverNameTo;
+    private List<FeedbackParticipantType> showGiverNameTo = new ArrayList<>();
 
-    @Persistent
     private Boolean isVisibilityFollowingFeedbackQuestion;
 
+    /** True if the comment is given by a feedback participant. */
+    private boolean isCommentFromFeedbackParticipant;
+
     /** The creation time of this comment. */
-    @Persistent
-    private Date createdAt;
+    @Translate(InstantTranslatorFactory.class)
+    private Instant createdAt;
 
     /** The comment from giver about the feedback response. */
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
+    @Unindex
     private Text commentText;
 
     /** The e-mail of the account that last edited the comment. */
-    @Persistent
     private String lastEditorEmail;
 
     /** The time in which the comment is last edited. */
-    @Persistent
-    private Date lastEditedAt;
+    @Translate(InstantTranslatorFactory.class)
+    private Instant lastEditedAt;
 
-    public FeedbackResponseComment(String courseId, String feedbackSessionName,
-            String feedbackQuestionId, String giverEmail, String feedbackResponseId,
-            Date createdAt, Text commentText,
-            String giverSection, String receiverSection, List<FeedbackParticipantType> showCommentTo,
-            List<FeedbackParticipantType> showGiverNameTo, String lastEditorEmail, Date lastEditedAt) {
+    @SuppressWarnings("unused")
+    private FeedbackResponseComment() {
+        // required by Objectify
+    }
+
+    public FeedbackResponseComment(String courseId, String feedbackSessionName, String feedbackQuestionId,
+            String giverEmail, FeedbackParticipantType commentGiverType, String feedbackResponseId, Instant createdAt,
+            String commentText, String giverSection, String receiverSection, List<FeedbackParticipantType> showCommentTo,
+            List<FeedbackParticipantType> showGiverNameTo, String lastEditorEmail, Instant lastEditedAt,
+            boolean isCommentFromFeedbackParticipant, boolean isVisibilityFollowingFeedbackQuestion) {
         this.feedbackResponseCommentId = null; // Auto generated by GAE
         this.courseId = courseId;
         this.feedbackSessionName = feedbackSessionName;
         this.feedbackQuestionId = feedbackQuestionId;
         this.giverEmail = giverEmail;
+        this.commentGiverType = commentGiverType;
         this.feedbackResponseId = feedbackResponseId;
         this.createdAt = createdAt;
-        this.commentText = SanitizationHelper.sanitizeForRichText(commentText);
+        setCommentText(SanitizationHelper.sanitizeForRichText(commentText));
         this.giverSection = giverSection;
         this.receiverSection = receiverSection;
-        this.showCommentTo = showCommentTo;
-        this.showGiverNameTo = showGiverNameTo;
-        this.isVisibilityFollowingFeedbackQuestion = false;
+        this.showCommentTo = showCommentTo == null ? new ArrayList<FeedbackParticipantType>() : showCommentTo;
+        this.showGiverNameTo = showGiverNameTo == null ? new ArrayList<FeedbackParticipantType>() : showGiverNameTo;
+        this.isVisibilityFollowingFeedbackQuestion = isVisibilityFollowingFeedbackQuestion;
         this.lastEditorEmail = lastEditorEmail == null ? giverEmail : lastEditorEmail;
-        this.lastEditedAt = lastEditedAt == null ? createdAt : lastEditedAt;
+        this.lastEditedAt = lastEditedAt == null ? this.createdAt : lastEditedAt;
+        this.isCommentFromFeedbackParticipant = isCommentFromFeedbackParticipant;
     }
 
     /**
@@ -116,11 +112,6 @@ public class FeedbackResponseComment extends Entity {
     public Long getFeedbackResponseCommentId() {
         return feedbackResponseCommentId;
     }
-
-    /* Auto generated by GAE. Don't set this.
-    public void setFeedbackResponseCommentId(Long feedbackResponseCommentId) {
-        this.feedbackResponseCommentId = feedbackResponseCommentId;
-    }*/
 
     public String getCourseId() {
         return courseId;
@@ -168,6 +159,22 @@ public class FeedbackResponseComment extends Entity {
         this.giverEmail = giverEmail;
     }
 
+    public FeedbackParticipantType getCommentGiverType() {
+        // TODO: Remove after data migration
+        if (commentGiverType == null) {
+            return FeedbackParticipantType.INSTRUCTORS;
+        }
+        return commentGiverType;
+    }
+
+    public void setCommentGiverType(FeedbackParticipantType commentGiverType) {
+        // TODO: Remove after data migration
+        if (commentGiverType == null) {
+            this.commentGiverType = FeedbackParticipantType.INSTRUCTORS;
+        }
+        this.commentGiverType = commentGiverType;
+    }
+
     public void setShowCommentTo(List<FeedbackParticipantType> showCommentTo) {
         this.showCommentTo = showCommentTo;
     }
@@ -192,20 +199,20 @@ public class FeedbackResponseComment extends Entity {
         this.feedbackResponseId = feedbackResponseId;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Text getCommentText() {
-        return commentText;
+    public String getCommentText() {
+        return commentText == null ? null : commentText.getValue();
     }
 
-    public void setCommentText(Text commentText) {
-        this.commentText = commentText;
+    public void setCommentText(String commentText) {
+        this.commentText = commentText == null ? null : new Text(commentText);
     }
 
     public String getGiverSection() {
@@ -232,11 +239,19 @@ public class FeedbackResponseComment extends Entity {
         return this.lastEditorEmail;
     }
 
-    public Date getLastEditedAt() {
+    public Instant getLastEditedAt() {
         return this.lastEditedAt;
     }
 
-    public void setLastEditedAt(Date lastEditedAt) {
+    public void setLastEditedAt(Instant lastEditedAt) {
         this.lastEditedAt = lastEditedAt;
+    }
+
+    public boolean getIsCommentFromFeedbackParticipant() {
+        return this.isCommentFromFeedbackParticipant;
+    }
+
+    public void setIsCommentFromFeedbackParticipant(boolean isCommentFromFeedbackParticipant) {
+        this.isCommentFromFeedbackParticipant = isCommentFromFeedbackParticipant;
     }
 }

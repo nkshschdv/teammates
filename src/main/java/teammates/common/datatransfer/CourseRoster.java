@@ -15,8 +15,8 @@ import teammates.common.datatransfer.attributes.StudentAttributes;
  */
 public class CourseRoster {
 
-    Map<String, StudentAttributes> studentListByEmail = new HashMap<String, StudentAttributes>();
-    Map<String, InstructorAttributes> instructorListByEmail = new HashMap<String, InstructorAttributes>();
+    Map<String, StudentAttributes> studentListByEmail = new HashMap<>();
+    Map<String, InstructorAttributes> instructorListByEmail = new HashMap<>();
 
     public CourseRoster(List<StudentAttributes> students, List<InstructorAttributes> instructors) {
         populateStudentListByEmail(students);
@@ -24,11 +24,11 @@ public class CourseRoster {
     }
 
     public List<StudentAttributes> getStudents() {
-        return new ArrayList<StudentAttributes>(studentListByEmail.values());
+        return new ArrayList<>(studentListByEmail.values());
     }
 
     public List<InstructorAttributes> getInstructors() {
-        return new ArrayList<InstructorAttributes>(instructorListByEmail.values());
+        return new ArrayList<>(instructorListByEmail.values());
     }
 
     /**
@@ -64,6 +64,25 @@ public class CourseRoster {
         return instructorListByEmail.get(email);
     }
 
+    /**
+     * Returns a map of email mapped to name of instructors and students of the course.
+     *
+     * @return Map in which key is email of student/instructor and value is name.
+     */
+    public Map<String, String> getEmailToNameTableFromRoster() {
+        Map<String, String> emailToNameTable = new HashMap<>();
+        List<InstructorAttributes> instructorList = getInstructors();
+        for (InstructorAttributes instructor : instructorList) {
+            emailToNameTable.put(instructor.email, instructor.name);
+        }
+
+        List<StudentAttributes> studentList = getStudents();
+        for (StudentAttributes student : studentList) {
+            emailToNameTable.put(student.email, student.name);
+        }
+        return emailToNameTable;
+    }
+
     private void populateStudentListByEmail(List<StudentAttributes> students) {
 
         if (students == null) {
@@ -85,5 +104,4 @@ public class CourseRoster {
             instructorListByEmail.put(i.email, i);
         }
     }
-
 }

@@ -1,12 +1,13 @@
 package teammates.test.pageobjects;
 
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 
 import teammates.common.util.Const;
+import teammates.e2e.pageobjects.Browser;
 
 public class InstructorCourseDetailsPage extends AppPage {
 
@@ -119,6 +120,18 @@ public class InstructorCourseDetailsPage extends AppPage {
         return this;
     }
 
+    public InstructorCourseDetailsPage clickDeleteAllAndCancel() {
+        click(getDeleteAllLink());
+        waitForConfirmationModalAndClickCancel();
+        return this;
+    }
+
+    public InstructorCourseDetailsPage clickDeleteAllAndConfirm() {
+        click(getDeleteAllLink());
+        waitForConfirmationModalAndClickOk();
+        return this;
+    }
+
     private WebElement getViewLink(int studentNum) {
         WebElement studentRow = browser.driver.findElement(By.id("student-c0." + studentNum));
         return studentRow.findElement(By.cssSelector("td.no-print.align-center > a:nth-child(1)"));
@@ -142,6 +155,10 @@ public class InstructorCourseDetailsPage extends AppPage {
             return thirdLink;
         }
         return studentRow.findElement(By.cssSelector("td.no-print.align-center > a:nth-child(4)"));
+    }
+
+    private WebElement getDeleteAllLink() {
+        return browser.driver.findElement(By.id("button-delete-all"));
     }
 
     private WebElement getAllRecordsLink(int studentNum) {

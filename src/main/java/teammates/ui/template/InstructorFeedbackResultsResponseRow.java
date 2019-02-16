@@ -1,10 +1,7 @@
 package teammates.ui.template;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
-import com.google.common.collect.ComparisonChain;
 
 /**
  * Data model for Instructor Feedback Results view by question, view by...
@@ -27,23 +24,32 @@ public class InstructorFeedbackResultsResponseRow {
     private boolean isRecipientProfilePictureAColumn;
     private String recipientProfilePictureLink;
 
+    private boolean isFeedbackParticipantCommentsOnResponsesAllowed;
+    private String feedbackParticipantComment;
+
     private boolean isActionsDisplayed;
 
     private String displayableResponse;
     private InstructorFeedbackResultsModerationButton moderationButton;
+    private FeedbackResponseCommentRow addCommentButton;
+
+    private List<FeedbackResponseCommentRow> instructorComments;
+    private int responseRecipientIndex;
+    private int responseGiverIndex;
+    private boolean isInstructorCommentsOnResponsesAllowed;
 
     public InstructorFeedbackResultsResponseRow(String giverDisplayableIdentifier, String giverTeam,
-                                        String recipientDisplayableIdentifier, String recipientTeam,
-                                        String displayableResponse,
-                                        InstructorFeedbackResultsModerationButton moderationButton) {
+            String recipientDisplayableIdentifier, String recipientTeam, String displayableResponse,
+            InstructorFeedbackResultsModerationButton moderationButton,
+            boolean isFeedbackParticipantCommentsOnResponsesAllowed) {
         this(giverDisplayableIdentifier, giverTeam, recipientDisplayableIdentifier, recipientTeam,
-             displayableResponse, moderationButton, false);
+                displayableResponse, moderationButton, false, isFeedbackParticipantCommentsOnResponsesAllowed);
     }
 
     public InstructorFeedbackResultsResponseRow(String giverDisplayableIdentifier, String giverTeam,
-                                        String recipientDisplayableIdentifier, String recipientTeam,
-                                        String displayableResponse,
-                                        InstructorFeedbackResultsModerationButton moderationButton, boolean isRowGrey) {
+            String recipientDisplayableIdentifier, String recipientTeam, String displayableResponse,
+            InstructorFeedbackResultsModerationButton moderationButton, boolean isRowGrey,
+            boolean isFeedbackParticipantCommentsOnResponsesAllowed) {
         this.giverDisplayableIdentifier = giverDisplayableIdentifier;
         this.giverTeam = giverTeam;
 
@@ -55,6 +61,7 @@ public class InstructorFeedbackResultsResponseRow {
         this.moderationButton = moderationButton;
 
         this.isRowGrey = isRowGrey;
+        this.isFeedbackParticipantCommentsOnResponsesAllowed = isFeedbackParticipantCommentsOnResponsesAllowed;
     }
 
     public String getGiverDisplayableIdentifier() {
@@ -91,6 +98,14 @@ public class InstructorFeedbackResultsResponseRow {
 
     public boolean isRowGrey() {
         return isRowGrey;
+    }
+
+    public String getFeedbackParticipantComment() {
+        return feedbackParticipantComment;
+    }
+
+    public void setFeedbackParticipantComment(String feedbackParticipantComment) {
+        this.feedbackParticipantComment = feedbackParticipantComment;
     }
 
     public void setGiverProfilePictureLink(String giverProfilePictureLink) {
@@ -152,18 +167,52 @@ public class InstructorFeedbackResultsResponseRow {
 
     public static List<InstructorFeedbackResultsResponseRow> sortListWithDefaultOrder(
             List<InstructorFeedbackResultsResponseRow> responseRows) {
-        Collections.sort(responseRows, new Comparator<InstructorFeedbackResultsResponseRow>() {
-            @Override
-            public int compare(InstructorFeedbackResultsResponseRow a1,
-                    InstructorFeedbackResultsResponseRow a2) {
-                return ComparisonChain.start()
-                        .compare(a1.getGiverTeam(), a2.getGiverTeam())
-                        .compare(a1.getGiverDisplayableIdentifier(),
-                                a2.getGiverDisplayableIdentifier())
-                        .result();
-            }
-        });
+        responseRows.sort(Comparator.comparing((InstructorFeedbackResultsResponseRow obj) -> obj.getGiverTeam())
+                .thenComparing(obj -> obj.getGiverDisplayableIdentifier()));
         return responseRows;
     }
 
+    public FeedbackResponseCommentRow getAddCommentButton() {
+        return addCommentButton;
+    }
+
+    public void setAddCommentButton(FeedbackResponseCommentRow addCommentButton) {
+        this.addCommentButton = addCommentButton;
+    }
+
+    public List<FeedbackResponseCommentRow> getInstructorComments() {
+        return instructorComments;
+    }
+
+    public void setInstructorComments(List<FeedbackResponseCommentRow> instructorComments) {
+        this.instructorComments = instructorComments;
+    }
+
+    public int getResponseRecipientIndex() {
+        return responseRecipientIndex;
+    }
+
+    public void setResponseRecipientIndex(int responseRecipientIndex) {
+        this.responseRecipientIndex = responseRecipientIndex;
+    }
+
+    public int getResponseGiverIndex() {
+        return responseGiverIndex;
+    }
+
+    public void setResponseGiverIndex(int responseGiverIndex) {
+        this.responseGiverIndex = responseGiverIndex;
+    }
+
+    public boolean isInstructorCommentsOnResponsesAllowed() {
+        return isInstructorCommentsOnResponsesAllowed;
+    }
+
+    public void setInstructorCommentsOnResponsesAllowed(boolean isCommentsOnResponsesAllowed) {
+        this.isInstructorCommentsOnResponsesAllowed = isCommentsOnResponsesAllowed;
+    }
+
+    public boolean isFeedbackParticipantCommentsOnResponsesAllowed() {
+        return isFeedbackParticipantCommentsOnResponsesAllowed;
+    }
 }

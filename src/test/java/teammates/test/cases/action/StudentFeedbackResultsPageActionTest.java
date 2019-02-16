@@ -1,18 +1,19 @@
 package teammates.test.cases.action;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import teammates.common.datatransfer.FeedbackSessionType;
 import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.datatransfer.attributes.StudentAttributes;
 import teammates.common.exception.UnauthorizedAccessException;
 import teammates.common.util.Const;
-import teammates.common.util.TimeHelper;
+import teammates.common.util.StringHelper;
 import teammates.logic.core.FeedbackSessionsLogic;
 import teammates.logic.core.StudentsLogic;
 import teammates.test.driver.AssertHelper;
@@ -23,15 +24,22 @@ import teammates.ui.pagedata.StudentFeedbackResultsPageData;
 /**
  * SUT: {@link StudentFeedbackResultsPageAction}.
  */
+@Test(enabled = false)
 public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
-    @BeforeClass
-    public void classSetup() throws Exception {
+    @Override
+    protected void prepareTestData() {
+        // see setup()
+    }
+
+    @BeforeMethod
+    public void setup() throws Exception {
+        removeAndRestoreTypicalDataBundle();
         addUnregStudentToCourse1();
     }
 
-    @AfterClass
-    public void classTearDown() {
+    @AfterMethod
+    public void tearDown() {
         StudentsLogic.inst().deleteStudentCascade("idOfTypicalCourse1", "student6InCourse1@gmail.tmt");
     }
 
@@ -40,18 +48,70 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
         return Const.ActionURIs.STUDENT_FEEDBACK_RESULTS_PAGE;
     }
 
+    @Test(expectedExceptions = UnauthorizedAccessException.class, enabled = false,
+            expectedExceptionsMessageRegExp = "Trying to access system using a non-existent feedback session entity")
+    public void testExecuteAndPostProcess_registeredStudentAccessSoftDeletedSession_shouldNotAccess() throws Exception {
+        FeedbackSessionAttributes session1InCourse1 = typicalBundle.feedbackSessions.get("session1InCourse1");
+
+        FeedbackSessionsLogic.inst()
+                .moveFeedbackSessionToRecycleBin(
+                        session1InCourse1.getFeedbackSessionName(), session1InCourse1.getCourseId());
+
+        StudentAttributes student1InCourse1 = typicalBundle.students.get("student1InCourse1");
+
+        gaeSimulation.loginAsStudent(student1InCourse1.googleId);
+
+        String[] submissionParams = new String[] {
+                Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName(),
+        };
+
+        StudentFeedbackResultsPageAction pageAction = getAction(submissionParams);
+        getRedirectResult(pageAction);
+    }
+
+    @Test(expectedExceptions = UnauthorizedAccessException.class, enabled = false,
+            expectedExceptionsMessageRegExp = "Trying to access system using a non-existent feedback session entity")
+    public void testExecuteAndPostProcess_unregisteredStudentAccessSoftDeletedSession_shouldNotAccess() throws Exception {
+        FeedbackSessionAttributes session1InCourse1 = typicalBundle.feedbackSessions.get("session1InCourse1");
+
+        FeedbackSessionsLogic.inst()
+                .moveFeedbackSessionToRecycleBin(
+                        session1InCourse1.getFeedbackSessionName(), session1InCourse1.getCourseId());
+
+        StudentAttributes unregisteredStudent = StudentsLogic.inst()
+                .getStudentForEmail("idOfTypicalCourse1", "student6InCourse1@gmail.tmt");
+
+        gaeSimulation.logoutUser();
+
+        String[] submissionParams = new String[] {
+                Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName(),
+
+                Const.ParamsNames.REGKEY, StringHelper.encrypt(unregisteredStudent.key),
+                Const.ParamsNames.STUDENT_EMAIL, unregisteredStudent.email,
+        };
+
+        StudentFeedbackResultsPageAction pageAction = getAction(submissionParams);
+        getRedirectResult(pageAction);
+    }
+
     @Override
-    @Test
+    @Test(enabled = false)
     public void testExecuteAndPostProcess() throws Exception {
-        FeedbackSessionAttributes session1InCourse1 = dataBundle.feedbackSessions.get("session1InCourse1");
-        FeedbackSessionAttributes emptySession = dataBundle.feedbackSessions.get("empty.session");
-        FeedbackSessionAttributes closedSession = dataBundle.feedbackSessions.get("closedSession");
-        FeedbackSessionAttributes gracePeriodSession = dataBundle.feedbackSessions.get("gracePeriodSession");
+        FeedbackSessionAttributes session1InCourse1 = typicalBundle.feedbackSessions.get("session1InCourse1");
+        FeedbackSessionAttributes emptySession = typicalBundle.feedbackSessions.get("empty.session");
+        FeedbackSessionAttributes closedSession = typicalBundle.feedbackSessions.get("closedSession");
+        FeedbackSessionAttributes gracePeriodSession = typicalBundle.feedbackSessions.get("gracePeriodSession");
 
         session1InCourse1.setResultsVisibleFromTime(session1InCourse1.getStartTime());
-        FeedbackSessionsLogic.inst().updateFeedbackSession(session1InCourse1);
+        FeedbackSessionsLogic.inst().updateFeedbackSession(
+                FeedbackSessionAttributes
+                        .updateOptionsBuilder(session1InCourse1.getFeedbackSessionName(), session1InCourse1.getCourseId())
+                        .withResultsVisibleFromTime(session1InCourse1.getResultsVisibleFromTime())
+                        .build());
 
-        StudentAttributes student1InCourse1 = dataBundle.students.get("student1InCourse1");
+        StudentAttributes student1InCourse1 = typicalBundle.students.get("student1InCourse1");
 
         gaeSimulation.loginAsStudent(student1InCourse1.googleId);
 
@@ -59,25 +119,25 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
         String[] submissionParams = new String[] {};
 
-        verifyRedirectTo(Const.ActionURIs.STUDENT_HOME_PAGE, submissionParams);
+        verifyRedirectTo(Const.WebPageURIs.STUDENT_HOME_PAGE, submissionParams);
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
         };
 
-        verifyRedirectTo(Const.ActionURIs.STUDENT_HOME_PAGE, submissionParams);
+        verifyRedirectTo(Const.WebPageURIs.STUDENT_HOME_PAGE, submissionParams);
 
         submissionParams = new String[] {
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName()
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName(),
         };
 
-        verifyRedirectTo(Const.ActionURIs.STUDENT_HOME_PAGE, submissionParams);
+        verifyRedirectTo(Const.WebPageURIs.STUDENT_HOME_PAGE, submissionParams);
 
         ______TS("results not viewable when not published");
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName()
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName(),
         };
 
         FeedbackSessionsLogic.inst().unpublishFeedbackSession(session1InCourse1);
@@ -86,34 +146,16 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
         try {
             getShowPageResult(pageAction);
+            signalFailureToDetectException();
         } catch (UnauthorizedAccessException exception) {
             assertEquals("This feedback session is not yet visible.", exception.getMessage());
         }
-
-        ______TS("cannot access a private session");
-
-        FeedbackSessionsLogic.inst().publishFeedbackSession(session1InCourse1);
-
-        session1InCourse1.setFeedbackSessionType(FeedbackSessionType.PRIVATE);
-        FeedbackSessionsLogic.inst().updateFeedbackSession(session1InCourse1);
-
-        pageAction = getAction(submissionParams);
-
-        try {
-            getShowPageResult(pageAction);
-        } catch (UnauthorizedAccessException exception) {
-            assertEquals("Feedback session [First feedback session] is not accessible to student "
-                         + "[" + student1InCourse1.email + "]", exception.getMessage());
-        }
-
-        session1InCourse1.setFeedbackSessionType(FeedbackSessionType.STANDARD);
-        FeedbackSessionsLogic.inst().updateFeedbackSession(session1InCourse1);
 
         ______TS("access a empty session");
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, emptySession.getCourseId(),
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, emptySession.getFeedbackSessionName()
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, emptySession.getFeedbackSessionName(),
         };
 
         pageAction = getAction(submissionParams);
@@ -127,44 +169,64 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, gracePeriodSession.getCourseId(),
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, gracePeriodSession.getFeedbackSessionName()
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, gracePeriodSession.getFeedbackSessionName(),
         };
 
         pageAction = getAction(submissionParams);
 
         try {
-            pageResult = getShowPageResult(pageAction);
+            getShowPageResult(pageAction);
+            signalFailureToDetectException();
         } catch (UnauthorizedAccessException exception) {
             assertEquals("This feedback session is not yet visible.", exception.getMessage());
         }
 
         ______TS("access a closed session");
 
+        Instant originalResultVisibleTime = closedSession.getResultsVisibleFromTime();
+        // Session is closed but not published; modify result visible time
+        closedSession.setResultsVisibleFromTime(Instant.now().plus(Duration.ofDays(1L)));
+        FeedbackSessionsLogic.inst().updateFeedbackSession(
+                FeedbackSessionAttributes
+                        .updateOptionsBuilder(closedSession.getFeedbackSessionName(), closedSession.getCourseId())
+                        .withResultsVisibleFromTime(closedSession.getResultsVisibleFromTime())
+                        .build());
+
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, closedSession.getCourseId(),
                 Const.ParamsNames.FEEDBACK_SESSION_NAME,
-                closedSession.getFeedbackSessionName()
+                closedSession.getFeedbackSessionName(),
         };
 
         pageAction = getAction(submissionParams);
 
         try {
-            pageResult = getShowPageResult(pageAction);
+            getShowPageResult(pageAction);
+            signalFailureToDetectException();
         } catch (UnauthorizedAccessException exception) {
             assertEquals("This feedback session is not yet visible.", exception.getMessage());
         }
+
+        // Restore original result visible time
+        closedSession.setResultsVisibleFromTime(originalResultVisibleTime);
+        FeedbackSessionsLogic.inst().updateFeedbackSession(
+                FeedbackSessionAttributes
+                        .updateOptionsBuilder(closedSession.getFeedbackSessionName(), closedSession.getCourseId())
+                        .withResultsVisibleFromTime(closedSession.getResultsVisibleFromTime())
+                        .build());
 
         ______TS("access a non-existent session");
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, "non-existent session"
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, "non-existent session",
         };
 
         pageAction = getAction(submissionParams);
 
         try {
-            pageResult = getShowPageResult(pageAction);
+            getShowPageResult(pageAction);
+            signalFailureToDetectException();
         } catch (UnauthorizedAccessException exception) {
             assertEquals("Trying to access system using a non-existent feedback session entity",
                          exception.getMessage());
@@ -180,7 +242,7 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
         submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
-                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName()
+                Const.ParamsNames.FEEDBACK_SESSION_NAME, session1InCourse1.getFeedbackSessionName(),
         };
 
         pageAction = getAction(submissionParams);
@@ -193,8 +255,7 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
         StudentFeedbackResultsPageData pageData = (StudentFeedbackResultsPageData) pageResult.data;
 
         // databundle time changed here because publishing sets resultsVisibleTime to now.
-        dataBundle.feedbackSessions.get("session1InCourse1").setResultsVisibleFromTime(
-                TimeHelper.now(dataBundle.feedbackSessions.get("session1InCourse1").getTimeZone()).getTime());
+        typicalBundle.feedbackSessions.get("session1InCourse1").setResultsVisibleFromTime(Instant.now());
 
         /*
          * The above test can fail if the time elapsed between pageData... and dataBundle...
@@ -202,19 +263,20 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
          * To solve that, verify that the time elapsed is less than one second (or else the test
          * fails after all) and if it does, change the value in the dataBundle to match.
          */
-        long pageDataResultsVisibleFromTime = pageData.getBundle().feedbackSession.getResultsVisibleFromTime().getTime();
-        long dataBundleResultsVisibleFromTime = dataBundle.feedbackSessions.get("session1InCourse1")
-                                                                           .getResultsVisibleFromTime().getTime();
+        Instant pageDataResultsVisibleFromTime = pageData.getBundle().feedbackSession.getResultsVisibleFromTime();
+        Instant dataBundleResultsVisibleFromTime =
+                typicalBundle.feedbackSessions.get("session1InCourse1").getResultsVisibleFromTime();
+        Duration difference = Duration.between(pageDataResultsVisibleFromTime, dataBundleResultsVisibleFromTime);
         long toleranceTimeInMs = 1000;
-        if (dataBundleResultsVisibleFromTime - pageDataResultsVisibleFromTime < toleranceTimeInMs) {
+        if (difference.compareTo(Duration.ofMillis(toleranceTimeInMs)) < 0) {
             // change to the value that will never make the test fail
-            dataBundle.feedbackSessions.get("session1InCourse1").setResultsVisibleFromTime(
+            typicalBundle.feedbackSessions.get("session1InCourse1").setResultsVisibleFromTime(
                     pageData.getBundle().feedbackSession.getResultsVisibleFromTime());
         }
 
-        List<FeedbackSessionAttributes> expectedInfoList = new ArrayList<FeedbackSessionAttributes>();
-        List<FeedbackSessionAttributes> actualInfoList = new ArrayList<FeedbackSessionAttributes>();
-        expectedInfoList.add(dataBundle.feedbackSessions.get("session1InCourse1"));
+        List<FeedbackSessionAttributes> expectedInfoList = new ArrayList<>();
+        List<FeedbackSessionAttributes> actualInfoList = new ArrayList<>();
+        expectedInfoList.add(typicalBundle.feedbackSessions.get("session1InCourse1"));
         actualInfoList.add(pageData.getBundle().feedbackSession);
 
         AssertHelper.assertSameContentIgnoreOrder(expectedInfoList, actualInfoList);
@@ -224,20 +286,20 @@ public class StudentFeedbackResultsPageActionTest extends BaseActionTest {
 
     @Override
     protected StudentFeedbackResultsPageAction getAction(String... params) {
-        return (StudentFeedbackResultsPageAction) gaeSimulation.getActionObject(getActionUri(), params);
+        return (StudentFeedbackResultsPageAction) gaeSimulation.getLegacyActionObject(getActionUri(), params);
     }
 
     @Override
-    @Test
+    @Test(enabled = false)
     protected void testAccessControl() throws Exception {
-        FeedbackSessionAttributes session1InCourse1 = dataBundle.feedbackSessions
+        FeedbackSessionAttributes session1InCourse1 = typicalBundle.feedbackSessions
                 .get("session1InCourse1");
         FeedbackSessionsLogic.inst().publishFeedbackSession(session1InCourse1);
 
         String[] submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, session1InCourse1.getCourseId(),
                 Const.ParamsNames.FEEDBACK_SESSION_NAME,
-                session1InCourse1.getFeedbackSessionName()
+                session1InCourse1.getFeedbackSessionName(),
         };
 
         verifyOnlyStudentsOfTheSameCourseCanAccess(submissionParams);

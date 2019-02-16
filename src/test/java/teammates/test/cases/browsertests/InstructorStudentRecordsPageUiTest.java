@@ -1,5 +1,7 @@
 package teammates.test.cases.browsertests;
 
+import java.io.IOException;
+
 import org.testng.annotations.Test;
 
 import teammates.common.datatransfer.DataBundle;
@@ -7,12 +9,13 @@ import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.datatransfer.attributes.StudentAttributes;
 import teammates.common.util.AppUrl;
 import teammates.common.util.Const;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
 import teammates.test.pageobjects.InstructorStudentRecordsPage;
 
 /**
- * SUT: {@link Const.ActionURIs#INSTRUCTOR_STUDENT_RECORDS_PAGE}.
+ * SUT: {@link Const.WebPageURIs#INSTRUCTOR_STUDENT_RECORDS_PAGE}.
  */
-public class InstructorStudentRecordsPageUiTest extends BaseUiTestCase {
+public class InstructorStudentRecordsPageUiTest extends BaseE2ETestCase {
     private InstructorStudentRecordsPage viewPage;
 
     private String instructorId;
@@ -118,7 +121,7 @@ public class InstructorStudentRecordsPageUiTest extends BaseUiTestCase {
         // TODO add link to a feedback session
     }
 
-    private void testFeedbackResponseCommentEditAndDeleteAction() {
+    private void testFeedbackResponseCommentEditAndDeleteAction() throws IOException {
         InstructorAttributes instructor;
         StudentAttributes student;
 
@@ -131,27 +134,37 @@ public class InstructorStudentRecordsPageUiTest extends BaseUiTestCase {
 
         viewPage = getStudentRecordsPage();
 
-        ______TS("Typical Case: Edit and add empty comment");
+        ______TS("Typical Case: Edit comment created by different instructor");
 
-        viewPage.editFeedbackResponseComment("-RGQ-1-1-1-1", "");
-        viewPage.verifyCommentFormErrorMessage(Const.StatusMessages.FEEDBACK_RESPONSE_COMMENT_EMPTY);
-        viewPage.closeEditFeedbackResponseCommentForm("-RGQ-1-1-1-1");
+        viewPage.editFeedbackResponseComment("-RGQ-1-1-1-1",
+                "First edited comment to Alice about feedback to Benny from different Instructor");
+        viewPage.verifyCommentRowContent("-RGQ-1-1-1-1", "First edited comment to Alice about feedback to Benny from "
+                + "different Instructor",
+                "Teammates Test");
+        viewPage.verifyHtmlMainContent("/instructorStudentRecordsPageEditedCommentOfDifferentInstructor.html");
 
         ______TS("Typical Case: Edit comment");
 
-        viewPage.editFeedbackResponseComment("-RGQ-1-1-1-1",
-                "Instructor first edited comment to Alice about feedback to Benny");
-        viewPage.verifyCommentRowContent("-RGQ-1-1-1-1", "Instructor first edited comment to Alice about feedback to Benny",
-                "teammates.test@gmail.tmt");
+        viewPage.editFeedbackResponseComment("-RGQ-1-1-1-2",
+                "Instructor second edited comment to Alice about feedback to Benny");
+        viewPage.verifyCommentRowContent("-RGQ-1-1-1-2", "Instructor second edited comment to Alice about feedback to Benny",
+                "Teammates Test");
+        viewPage.verifyHtmlMainContent("/instructorStudentRecordsPageEditedComment.html");
+
+        ______TS("Typical Case: Edit and add empty comment");
+
+        viewPage.editFeedbackResponseComment("-RGQ-1-1-1-2", "");
+        viewPage.verifyCommentFormErrorMessage(Const.StatusMessages.FEEDBACK_RESPONSE_COMMENT_EMPTY);
+        viewPage.closeEditFeedbackResponseCommentForm("-RGQ-1-1-1-2");
 
         ______TS("Typical Case: Delete comment");
 
-        viewPage.deleteFeedbackResponseComment("-RGQ-1-1-1-2");
-        viewPage.verifyRowMissing("-RGQ-1-1-1-2");
+        viewPage.deleteFeedbackResponseComment("-RGQ-1-1-1-3");
+        viewPage.verifyCommentRowMissing("-RGQ-1-1-1-3");
     }
 
     private InstructorStudentRecordsPage getStudentRecordsPage() {
-        AppUrl viewPageUrl = createUrl(Const.ActionURIs.INSTRUCTOR_STUDENT_RECORDS_PAGE)
+        AppUrl viewPageUrl = createUrl(Const.WebPageURIs.INSTRUCTOR_STUDENT_RECORDS_PAGE)
                            .withUserId(instructorId)
                            .withCourseId(courseId)
                            .withStudentEmail(studentEmail);

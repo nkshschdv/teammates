@@ -1,12 +1,14 @@
 package teammates.logic.core;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import teammates.common.datatransfer.CourseDetailsBundle;
 import teammates.common.datatransfer.CourseSummaryBundle;
@@ -69,7 +71,7 @@ public final class CoursesLogic {
     public void createCourse(String courseId, String courseName, String courseTimeZone)
             throws InvalidParametersException, EntityAlreadyExistsException {
 
-        CourseAttributes courseToAdd = new CourseAttributes(courseId, courseName, courseTimeZone);
+        CourseAttributes courseToAdd = validateAndCreateCourseAttributes(courseId, courseName, courseTimeZone);
         coursesDb.createEntity(courseToAdd);
     }
 
@@ -92,23 +94,18 @@ public final class CoursesLogic {
         /* Create the initial instructor for the course */
         InstructorPrivileges privileges = new InstructorPrivileges(
                 Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_COOWNER);
-        InstructorAttributes instructor = new InstructorAttributes(
-                instructorGoogleId,
-                courseId,
-                courseCreator.name,
-                courseCreator.email,
-                Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_COOWNER,
-                true,
-                InstructorAttributes.DEFAULT_DISPLAY_NAME,
-                privileges);
+        InstructorAttributes instructor = InstructorAttributes
+                .builder(instructorGoogleId, courseId, courseCreator.name, courseCreator.email)
+                .withPrivileges(privileges)
+                .build();
 
         try {
             instructorsLogic.createInstructor(instructor);
         } catch (EntityAlreadyExistsException | InvalidParametersException e) {
             //roll back the transaction
             coursesDb.deleteCourse(courseId);
-            String errorMessage = "Unexpected exception while trying to create instructor for a new course " + Const.EOL
-                                  + instructor.toString() + Const.EOL
+            String errorMessage = "Unexpected exception while trying to create instructor for a new course "
+                                  + System.lineSeparator() + instructor.toString() + System.lineSeparator()
                                   + TeammatesException.toStringWithStackTrace(e);
             Assumption.fail(errorMessage);
         }
@@ -154,9 +151,14 @@ public final class CoursesLogic {
     public List<CourseDetailsBundle> getCourseDetailsListForStudent(String googleId)
                 throws EntityDoesNotExistException {
 
+        List<StudentAttributes> studentDataList = studentsLogic.getStudentsForGoogleId(googleId);
+        if (studentDataList.isEmpty()) {
+            throw new EntityDoesNotExistException("Student with Google ID " + googleId + " does not exist");
+        }
+
         List<CourseAttributes> courseList = getCoursesForStudentAccount(googleId);
         CourseAttributes.sortById(courseList);
-        List<CourseDetailsBundle> courseDetailsList = new ArrayList<CourseDetailsBundle>();
+        List<CourseDetailsBundle> courseDetailsList = new ArrayList<>();
 
         for (CourseAttributes c : courseList) {
 
@@ -197,43 +199,24 @@ public final class CoursesLogic {
     }
 
     /**
-     * Returns a list of section names for the course with ID courseId.
-     */
-    public List<String> getSectionsNameForCourse(String courseId) throws EntityDoesNotExistException {
-        return getSectionsNameForCourse(courseId, false);
-    }
-
-    /**
-     * Returns a list of section names for the specified course.
-     */
-    public List<String> getSectionsNameForCourse(CourseAttributes course) throws EntityDoesNotExistException {
-        Assumption.assertNotNull("Course is null", course);
-        return getSectionsNameForCourse(course.getId(), true);
-    }
-
-    /**
-     * Returns a list of section names for a course with or without a need to
-     * check if the course is existent.
+     * Returns a list of section names for the course with valid ID courseId.
      *
      * @param courseId Course ID of the course
-     * @param isCourseVerified Determine whether it is necessary to check if the course exists
      */
-    private List<String> getSectionsNameForCourse(String courseId, boolean isCourseVerified)
-        throws EntityDoesNotExistException {
-        if (!isCourseVerified) {
-            verifyCourseIsPresent(courseId);
-        }
+    public List<String> getSectionsNameForCourse(String courseId) throws EntityDoesNotExistException {
+        verifyCourseIsPresent(courseId);
+
         List<StudentAttributes> studentDataList = studentsLogic.getStudentsForCourse(courseId);
 
-        Set<String> sectionNameSet = new HashSet<String>();
+        Set<String> sectionNameSet = new HashSet<>();
         for (StudentAttributes sd : studentDataList) {
             if (!sd.section.equals(Const.DEFAULT_SECTION)) {
                 sectionNameSet.add(sd.section);
             }
         }
 
-        List<String> sectionNameList = new ArrayList<String>(sectionNameSet);
-        Collections.sort(sectionNameList);
+        List<String> sectionNameList = new ArrayList<>(sectionNameSet);
+        sectionNameList.sort(null);
 
         return sectionNameList;
     }
@@ -251,7 +234,7 @@ public final class CoursesLogic {
         List<StudentAttributes> students = studentsLogic.getStudentsForCourse(course.getId());
         StudentAttributes.sortBySectionName(students);
 
-        List<SectionDetailsBundle> sections = new ArrayList<SectionDetailsBundle>();
+        List<SectionDetailsBundle> sections = new ArrayList<>();
 
         SectionDetailsBundle section = null;
         int teamIndexWithinSection = 0;
@@ -318,7 +301,7 @@ public final class CoursesLogic {
         List<StudentAttributes> students = studentsLogic.getStudentsForCourse(courseId);
         StudentAttributes.sortBySectionName(students);
 
-        List<SectionDetailsBundle> sections = new ArrayList<SectionDetailsBundle>();
+        List<SectionDetailsBundle> sections = new ArrayList<>();
 
         SectionDetailsBundle section = null;
         int teamIndexWithinSection = 0;
@@ -376,7 +359,7 @@ public final class CoursesLogic {
         List<StudentAttributes> students = studentsLogic.getStudentsForCourse(courseId);
         StudentAttributes.sortByTeamName(students);
 
-        List<TeamDetailsBundle> teams = new ArrayList<TeamDetailsBundle>();
+        List<TeamDetailsBundle> teams = new ArrayList<>();
 
         TeamDetailsBundle team = null;
 
@@ -471,22 +454,20 @@ public final class CoursesLogic {
      *
      * @param googleId The Google ID of the student
      */
-    public List<CourseAttributes> getCoursesForStudentAccount(String googleId) throws EntityDoesNotExistException {
+    public List<CourseAttributes> getCoursesForStudentAccount(String googleId) {
         List<StudentAttributes> studentDataList = studentsLogic.getStudentsForGoogleId(googleId);
 
-        if (studentDataList.isEmpty()) {
-            throw new EntityDoesNotExistException("Student with Google ID " + googleId + " does not exist");
-        }
+        List<String> courseIds = studentDataList.stream()
+                .filter(student -> !getCourse(student.course).isCourseDeleted())
+                .map(StudentAttributes::getCourse)
+                .collect(Collectors.toList());
 
-        List<String> courseIds = new ArrayList<String>();
-        for (StudentAttributes s : studentDataList) {
-            courseIds.add(s.course);
-        }
         return coursesDb.getCourses(courseIds);
     }
 
     /**
-     * Returns a list of {@link CourseAttributes} for all courses a given instructor belongs to.
+     * Returns a list of {@link CourseAttributes} for all courses a given instructor belongs to,
+     * except for courses in recycle bin.
      *
      * @param googleId The Google ID of the instructor
      */
@@ -495,7 +476,8 @@ public final class CoursesLogic {
     }
 
     /**
-     * Returns a list of {@link CourseAttributes} for courses a given instructor belongs to.
+     * Returns a list of {@link CourseAttributes} for courses a given instructor belongs to,
+     * except for courses in recycle bin.
      *
      * @param googleId The Google ID of the instructor
      * @param omitArchived if {@code true}, omits all the archived courses from the return
@@ -506,15 +488,16 @@ public final class CoursesLogic {
     }
 
     /**
-     * Returns a list of {@link CourseAttributes} for all courses for a given list of instructors.
+     * Returns a list of {@link CourseAttributes} for all courses for a given list of instructors
+     * except for courses in Recycle Bin.
      */
     public List<CourseAttributes> getCoursesForInstructor(List<InstructorAttributes> instructorList) {
         Assumption.assertNotNull("Supplied parameter was null", instructorList);
-        List<String> courseIdList = new ArrayList<String>();
 
-        for (InstructorAttributes instructor : instructorList) {
-            courseIdList.add(instructor.courseId);
-        }
+        List<String> courseIdList = instructorList.stream()
+                .filter(instructor -> !coursesDb.getCourse(instructor.courseId).isCourseDeleted())
+                .map(InstructorAttributes::getCourseId)
+                .collect(Collectors.toList());
 
         List<CourseAttributes> courseList = coursesDb.getCourses(courseIdList);
 
@@ -523,10 +506,46 @@ public final class CoursesLogic {
             for (CourseAttributes ca : courseList) {
                 courseIdList.remove(ca.getId());
             }
-            log.severe("Course(s) was deleted but the instructor still exists: " + Const.EOL + courseIdList.toString());
+            log.severe("Course(s) was deleted but the instructor still exists: " + System.lineSeparator()
+                    + courseIdList.toString());
         }
 
         return courseList;
+    }
+
+    /**
+     * Returns a list of {@link CourseAttributes} for soft-deleted courses for a given list of instructors.
+     */
+    public List<CourseAttributes> getSoftDeletedCoursesForInstructors(List<InstructorAttributes> instructorList) {
+        Assumption.assertNotNull("Supplied parameter was null", instructorList);
+
+        List<String> softDeletedCourseIdList = instructorList.stream()
+                .filter(instructor -> coursesDb.getCourse(instructor.courseId).isCourseDeleted())
+                .map(InstructorAttributes::getCourseId)
+                .collect(Collectors.toList());
+
+        List<CourseAttributes> softDeletedCourseList = coursesDb.getCourses(softDeletedCourseIdList);
+
+        if (softDeletedCourseIdList.size() > softDeletedCourseList.size()) {
+            for (CourseAttributes ca : softDeletedCourseList) {
+                softDeletedCourseIdList.remove(ca.getId());
+            }
+            log.severe("Course(s) was deleted but the instructor still exists: " + System.lineSeparator()
+                    + softDeletedCourseIdList.toString());
+        }
+
+        return softDeletedCourseList;
+    }
+
+    public CourseAttributes getSoftDeletedCourseForInstructor(InstructorAttributes instructor) {
+        Assumption.assertNotNull("Supplied parameter was null", instructor);
+
+        CourseAttributes softDeletedCourse = coursesDb.getCourse(instructor.courseId);
+
+        if (!softDeletedCourse.isCourseDeleted()) {
+            return null;
+        }
+        return softDeletedCourse;
     }
 
     /**
@@ -557,8 +576,8 @@ public final class CoursesLogic {
     public Map<String, CourseDetailsBundle> getCourseSummariesForInstructor(
             List<InstructorAttributes> instructorAttributesList) {
 
-        HashMap<String, CourseDetailsBundle> courseSummaryList = new HashMap<String, CourseDetailsBundle>();
-        List<String> courseIdList = new ArrayList<String>();
+        Map<String, CourseDetailsBundle> courseSummaryList = new HashMap<>();
+        List<String> courseIdList = new ArrayList<>();
 
         for (InstructorAttributes instructor : instructorAttributesList) {
             courseIdList.add(instructor.courseId);
@@ -571,7 +590,8 @@ public final class CoursesLogic {
             for (CourseAttributes ca : courseList) {
                 courseIdList.remove(ca.getId());
             }
-            log.severe("Course(s) was deleted but the instructor still exists: " + Const.EOL + courseIdList.toString());
+            log.severe("Course(s) was deleted but the instructor still exists: " + System.lineSeparator()
+                        + courseIdList.toString());
         }
 
         for (CourseAttributes ca : courseList) {
@@ -596,24 +616,29 @@ public final class CoursesLogic {
     }
 
     /**
-     * Updates the course details.
-     * @param newCourse the course object containing new details of the course
+     * Updates a course by {@link CourseAttributes.UpdateOptions}.
+     *
+     * <p>If the {@code timezone} of the course is changed, cascade the change to its corresponding feedback sessions.
+     *
+     * @return updated course
+     * @throws InvalidParametersException if attributes to update are not valid
+     * @throws EntityDoesNotExistException if the course cannot be found
      */
-    public void updateCourse(CourseAttributes newCourse) throws InvalidParametersException,
-                                                                EntityDoesNotExistException {
-        Assumption.assertNotNull(Const.StatusCodes.NULL_PARAMETER, newCourse);
+    public CourseAttributes updateCourseCascade(CourseAttributes.UpdateOptions updateOptions)
+            throws InvalidParametersException, EntityDoesNotExistException {
+        CourseAttributes oldCourse = coursesDb.getCourse(updateOptions.getCourseId());
+        CourseAttributes updatedCourse = coursesDb.updateCourse(updateOptions);
 
-        CourseAttributes oldCourse = coursesDb.getCourse(newCourse.getId());
-
-        if (oldCourse == null) {
-            throw new EntityDoesNotExistException("Trying to update a course that does not exist.");
+        if (!updatedCourse.getTimeZone().equals(oldCourse.getTimeZone())) {
+            feedbackSessionsLogic
+                    .updateFeedbackSessionsTimeZoneForCourse(updatedCourse.getId(), updatedCourse.getTimeZone());
         }
 
-        coursesDb.updateCourse(newCourse);
+        return updatedCourse;
     }
 
     /**
-     * Delete a course from its given corresponding ID.
+     * Permanently deletes a course in Recycle Bin by its given corresponding ID.
      * This will also cascade the data in other databases which are related to this course.
      */
     public void deleteCourseCascade(String courseId) {
@@ -623,16 +648,66 @@ public final class CoursesLogic {
         coursesDb.deleteCourse(courseId);
     }
 
+    /**
+     * Permanently deletes all courses in Recycle Bin.
+     * This will also cascade the data in other databases which are related to these courses.
+     */
+    public void deleteAllCoursesCascade(List<InstructorAttributes> instructorList) {
+        Assumption.assertNotNull("Supplied parameter was null", instructorList);
+
+        List<String> softDeletedCourseIdList = instructorList.stream()
+                .filter(instructor -> coursesDb.getCourse(instructor.courseId).isCourseDeleted())
+                .map(InstructorAttributes::getCourseId)
+                .collect(Collectors.toList());
+
+        for (String courseId : softDeletedCourseIdList) {
+            deleteCourseCascade(courseId);
+        }
+    }
+
+    /**
+     * Moves a course to Recycle Bin by its given corresponding ID.
+     * @return the time when the course is moved to the recycle bin
+     */
+    public Instant moveCourseToRecycleBin(String courseId) throws EntityDoesNotExistException {
+
+        return coursesDb.softDeleteCourse(courseId);
+    }
+
+    /**
+     * Restores a course from Recycle Bin by its given corresponding ID.
+     */
+    public void restoreCourseFromRecycleBin(String courseId) throws EntityDoesNotExistException {
+        coursesDb.restoreDeletedCourse(courseId);
+    }
+
+    /**
+     * Restores all courses from Recycle Bin.
+     */
+    public void restoreAllCoursesFromRecycleBin(List<InstructorAttributes> instructorList)
+            throws EntityDoesNotExistException {
+        Assumption.assertNotNull("Supplied parameter was null", instructorList);
+
+        List<String> softDeletedCourseIdList = instructorList.stream()
+                .filter(instructor -> coursesDb.getCourse(instructor.courseId).isCourseDeleted())
+                .map(InstructorAttributes::getCourseId)
+                .collect(Collectors.toList());
+
+        for (String courseId : softDeletedCourseIdList) {
+            restoreCourseFromRecycleBin(courseId);
+        }
+    }
+
     private Map<String, CourseSummaryBundle> getCourseSummaryWithoutStatsForInstructor(
             List<InstructorAttributes> instructorAttributesList) {
 
-        HashMap<String, CourseSummaryBundle> courseSummaryList = new HashMap<String, CourseSummaryBundle>();
+        Map<String, CourseSummaryBundle> courseSummaryList = new HashMap<>();
 
-        List<String> courseIdList = new ArrayList<String>();
+        List<String> courseIdList = instructorAttributesList.stream()
+                .filter(instructor -> !coursesDb.getCourse(instructor.courseId).isCourseDeleted())
+                .map(InstructorAttributes::getCourseId)
+                .collect(Collectors.toList());
 
-        for (InstructorAttributes ia : instructorAttributesList) {
-            courseIdList.add(ia.courseId);
-        }
         List<CourseAttributes> courseList = coursesDb.getCourses(courseIdList);
 
         // Check that all courseIds queried returned a course.
@@ -640,7 +715,8 @@ public final class CoursesLogic {
             for (CourseAttributes ca : courseList) {
                 courseIdList.remove(ca.getId());
             }
-            log.severe("Course(s) was deleted but the instructor still exists: " + Const.EOL + courseIdList.toString());
+            log.severe("Course(s) was deleted but the instructor still exists: " + System.lineSeparator()
+                    + courseIdList.toString());
         }
 
         for (CourseAttributes ca : courseList) {
@@ -660,12 +736,12 @@ public final class CoursesLogic {
         boolean hasSection = hasIndicatedSections(courseId);
 
         StringBuilder export = new StringBuilder(100);
-        String courseInfo = "Course ID," + SanitizationHelper.sanitizeForCsv(courseId) + Const.EOL
-                      + "Course Name," + SanitizationHelper.sanitizeForCsv(course.course.getName()) + Const.EOL
-                      + Const.EOL + Const.EOL;
+        String courseInfo = "Course ID," + SanitizationHelper.sanitizeForCsv(courseId) + System.lineSeparator()
+                      + "Course Name," + SanitizationHelper.sanitizeForCsv(course.course.getName())
+                      + System.lineSeparator() + System.lineSeparator() + System.lineSeparator();
         export.append(courseInfo);
 
-        String header = (hasSection ? "Section," : "") + "Team,Full Name,Last Name,Status,Email" + Const.EOL;
+        String header = (hasSection ? "Section," : "") + "Team,Full Name,Last Name,Status,Email" + System.lineSeparator();
         export.append(header);
 
         for (SectionDetailsBundle section : course.sections) {
@@ -686,7 +762,7 @@ public final class CoursesLogic {
                             + SanitizationHelper.sanitizeForCsv(StringHelper.removeExtraSpace(student.name)) + ','
                             + SanitizationHelper.sanitizeForCsv(StringHelper.removeExtraSpace(student.lastName)) + ','
                             + SanitizationHelper.sanitizeForCsv(studentStatus) + ','
-                            + SanitizationHelper.sanitizeForCsv(student.email) + Const.EOL);
+                            + SanitizationHelper.sanitizeForCsv(student.email) + System.lineSeparator());
                 }
             }
         }
@@ -710,7 +786,7 @@ public final class CoursesLogic {
      */
     public List<String> getArchivedCourseIds(List<CourseAttributes> allCourses,
                                              Map<String, InstructorAttributes> instructorsForCourses) {
-        List<String> archivedCourseIds = new ArrayList<String>();
+        List<String> archivedCourseIds = new ArrayList<>();
         for (CourseAttributes course : allCourses) {
             InstructorAttributes instructor = instructorsForCourses.get(course.getId());
             if (instructor.isArchived) {
@@ -720,4 +796,34 @@ public final class CoursesLogic {
         return archivedCourseIds;
     }
 
+    /**
+     * Checks that {@code courseTimeZone} is valid and then returns a {@link CourseAttributes}.
+     * Field validation is usually done in {@link CoursesDb} by calling {@link CourseAttributes#getInvalidityInfo()}.
+     * However, a {@link CourseAttributes} cannot be created with an invalid time zone string.
+     * Hence, validation of this field is carried out here.
+     *
+     * @throws InvalidParametersException containing error messages for all fields if {@code courseTimeZone} is invalid
+     */
+    private CourseAttributes validateAndCreateCourseAttributes(
+            String courseId, String courseName, String courseTimeZone) throws InvalidParametersException {
+
+        // Imitate `CourseAttributes.getInvalidityInfo`
+        FieldValidator validator = new FieldValidator();
+        String timeZoneErrorMessage = validator.getInvalidityInfoForTimeZone(courseTimeZone);
+        if (!timeZoneErrorMessage.isEmpty()) {
+            // Leave validation of other fields to `CourseAttributes.getInvalidityInfo`
+            CourseAttributes dummyCourse = CourseAttributes
+                    .builder(courseId, courseName, Const.DEFAULT_TIME_ZONE)
+                    .build();
+            List<String> errors = dummyCourse.getInvalidityInfo();
+            errors.add(timeZoneErrorMessage);
+            // Imitate exception throwing in `CoursesDb`
+            throw new InvalidParametersException(errors);
+        }
+
+        // If time zone field is valid, leave validation  of other fields to `CoursesDb` like usual
+        return CourseAttributes
+                .builder(courseId, courseName, ZoneId.of(courseTimeZone))
+                .build();
+    }
 }

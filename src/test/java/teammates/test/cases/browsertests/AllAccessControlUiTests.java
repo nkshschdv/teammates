@@ -7,10 +7,11 @@ import org.testng.annotations.Test;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.util.AppUrl;
 import teammates.common.util.Const;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
+import teammates.e2e.util.BackDoor;
+import teammates.e2e.util.Priority;
+import teammates.e2e.util.TestProperties;
 import teammates.test.driver.AssertHelper;
-import teammates.test.driver.BackDoor;
-import teammates.test.driver.Priority;
-import teammates.test.driver.TestProperties;
 import teammates.test.pageobjects.AppPage;
 import teammates.test.pageobjects.HomePage;
 import teammates.test.pageobjects.LoginPage;
@@ -22,7 +23,7 @@ import teammates.test.pageobjects.NotFoundPage;
  * representative tests only. Access control is tested fully at 'Action' level.
  */
 @Priority(6)
-public class AllAccessControlUiTests extends BaseUiTestCase {
+public class AllAccessControlUiTests extends BaseE2ETestCase {
 
     private AppPage currentPage;
 
@@ -54,15 +55,15 @@ public class AllAccessControlUiTests extends BaseUiTestCase {
 
         ______TS("student pages");
 
-        verifyRedirectToLogin(createUrl(Const.ActionURIs.STUDENT_HOME_PAGE));
+        verifyRedirectToLogin(createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE));
 
         ______TS("instructor pages");
 
-        verifyRedirectToLogin(createUrl(Const.ActionURIs.INSTRUCTOR_HOME_PAGE));
+        verifyRedirectToLogin(createUrl(Const.WebPageURIs.INSTRUCTOR_HOME_PAGE));
 
         ______TS("admin pages");
 
-        verifyRedirectToLogin(createUrl(Const.ActionURIs.ADMIN_HOME_PAGE));
+        verifyRedirectToLogin(createUrl(Const.WebPageURIs.ADMIN_HOME_PAGE));
 
     }
 
@@ -73,14 +74,14 @@ public class AllAccessControlUiTests extends BaseUiTestCase {
 
         loginStudent(TestProperties.TEST_UNREG_ACCOUNT, TestProperties.TEST_UNREG_PASSWORD);
 
-        verifyRedirectToWelcomeStrangerPage(createUrl(Const.ActionURIs.STUDENT_HOME_PAGE),
+        verifyRedirectToWelcomeStrangerPage(createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE),
                                             TestProperties.TEST_UNREG_ACCOUNT);
 
         ______TS("instructor pages");
 
         loginInstructorUnsuccessfully(TestProperties.TEST_UNREG_ACCOUNT, TestProperties.TEST_UNREG_PASSWORD);
 
-        AppUrl url = createUrl(Const.ActionURIs.INSTRUCTOR_HOME_PAGE);
+        AppUrl url = createUrl(Const.WebPageURIs.INSTRUCTOR_HOME_PAGE);
         verifyRedirectToNotAuthorized(url);
         verifyCannotMasquerade(url, otherInstructor.googleId);
 
@@ -108,7 +109,7 @@ public class AllAccessControlUiTests extends BaseUiTestCase {
 
         ______TS("cannot view other homepage");
 
-        verifyCannotMasquerade(createUrl(Const.ActionURIs.STUDENT_HOME_PAGE), otherInstructor.googleId);
+        verifyCannotMasquerade(createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE), otherInstructor.googleId);
     }
 
     @Test
@@ -118,44 +119,7 @@ public class AllAccessControlUiTests extends BaseUiTestCase {
 
         ______TS("cannot view other homepage");
 
-        verifyCannotMasquerade(createUrl(Const.ActionURIs.INSTRUCTOR_HOME_PAGE), otherInstructor.googleId);
-    }
-
-    @Test
-    public void testPubliclyAccessiblePages() throws Exception {
-
-        ______TS("log out page");
-        // has been covered in testUserNotLoggedIn method
-
-        ______TS("unauthorized page");
-        AppUrl url = createUrl(Const.ViewURIs.UNAUTHORIZED);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/unauthorized.html");
-
-        ______TS("error page");
-        url = createUrl(Const.ViewURIs.ERROR_PAGE);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/errorPage.html");
-
-        ______TS("deadline exceeded error page");
-        url = createUrl(Const.ViewURIs.DEADLINE_EXCEEDED_ERROR_PAGE);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/deadlineExceededErrorPage.html");
-
-        ______TS("entity not found page");
-        url = createUrl(Const.ViewURIs.ENTITY_NOT_FOUND_PAGE);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/entityNotFoundPage.html");
-
-        ______TS("action not found page");
-        url = createUrl(Const.ViewURIs.ACTION_NOT_FOUND_PAGE);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/pageNotFound.html");
-
-        ______TS("enable javascript page");
-        url = createUrl(Const.ViewURIs.ENABLE_JS);
-        currentPage.navigateTo(url);
-        currentPage.verifyHtml("/enableJs.html");
+        verifyCannotMasquerade(createUrl(Const.WebPageURIs.INSTRUCTOR_HOME_PAGE), otherInstructor.googleId);
     }
 
     private void loginStudent(String userName, String password) {
@@ -178,7 +142,7 @@ public class AllAccessControlUiTests extends BaseUiTestCase {
 
     private void verifyCannotAccessAdminPages() {
         //cannot access directly
-        AppUrl url = createUrl(Const.ActionURIs.ADMIN_HOME_PAGE);
+        AppUrl url = createUrl(Const.WebPageURIs.ADMIN_HOME_PAGE);
         verifyRedirectToForbidden(url);
         //cannot access by masquerading either
         url = url.withUserId(TestProperties.TEST_ADMIN_ACCOUNT);

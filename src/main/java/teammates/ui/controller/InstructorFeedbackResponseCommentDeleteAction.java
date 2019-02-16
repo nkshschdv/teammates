@@ -1,12 +1,11 @@
 package teammates.ui.controller;
 
 import teammates.common.datatransfer.attributes.FeedbackResponseAttributes;
-import teammates.common.datatransfer.attributes.FeedbackResponseCommentAttributes;
 import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.util.Assumption;
 import teammates.common.util.Const;
-import teammates.ui.pagedata.InstructorFeedbackResponseCommentAjaxPageData;
+import teammates.ui.pagedata.FeedbackResponseCommentAjaxPageData;
 
 /**
  * Action: Delete {@link FeedbackResponseCommentAttributes}.
@@ -32,18 +31,17 @@ public class InstructorFeedbackResponseCommentDeleteAction extends InstructorFee
         verifyAccessibleForInstructorToFeedbackResponseComment(
                 feedbackResponseCommentId, instructor, session, response);
 
-        FeedbackResponseCommentAttributes feedbackResponseComment = new FeedbackResponseCommentAttributes();
-        feedbackResponseComment.setId(Long.parseLong(feedbackResponseCommentId));
+        Long commentId = Long.parseLong(feedbackResponseCommentId);
 
-        logic.deleteDocument(feedbackResponseComment);
-        logic.deleteFeedbackResponseComment(feedbackResponseComment);
+        logic.deleteDocumentByCommentId(commentId);
+        logic.deleteFeedbackResponseCommentById(commentId);
 
         statusToAdmin += "InstructorFeedbackResponseCommentDeleteAction:<br>"
-                + "Deleting feedback response comment: " + feedbackResponseComment.getId() + "<br>"
+                + "Deleting feedback response comment: " + commentId + "<br>"
                 + "in course/feedback session: " + courseId + "/" + feedbackSessionName + "<br>";
 
-        InstructorFeedbackResponseCommentAjaxPageData data =
-                new InstructorFeedbackResponseCommentAjaxPageData(account, sessionToken);
+        FeedbackResponseCommentAjaxPageData data =
+                new FeedbackResponseCommentAjaxPageData(account, sessionToken);
 
         return createAjaxResult(data);
     }

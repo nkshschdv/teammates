@@ -1,31 +1,38 @@
 package teammates.test.pageobjects;
 
-import static org.testng.AssertJUnit.assertFalse;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.FindBy;
-
-import com.google.appengine.api.datastore.Text;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import teammates.common.datatransfer.FeedbackParticipantType;
 import teammates.common.util.Const;
 import teammates.common.util.StringHelper;
 import teammates.common.util.TimeHelper;
+import teammates.e2e.pageobjects.Browser;
+import teammates.e2e.util.TestProperties;
 import teammates.test.driver.TimeHelperExtension;
 
 public class InstructorFeedbackEditPage extends AppPage {
 
-    private static final int NEW_QUESTION_NUM = -1;
+    public static final int NEW_QUESTION_NUM = -1;
 
     @FindBy(id = "starttime")
     private WebElement startTimeDropdown;
@@ -66,12 +73,6 @@ public class InstructorFeedbackEditPage extends AppPage {
     @FindBy(id = Const.ParamsNames.FEEDBACK_SESSION_RESULTSVISIBLEBUTTON + "_later")
     private WebElement manualResultsVisibleTimeButton;
 
-    @FindBy(id = Const.ParamsNames.FEEDBACK_SESSION_SESSIONVISIBLEBUTTON + "_never")
-    private WebElement neverSessionVisibleTimeButton;
-
-    @FindBy(id = Const.ParamsNames.FEEDBACK_SESSION_RESULTSVISIBLEBUTTON + "_never")
-    private WebElement neverResultsVisibleTimeButton;
-
     @FindBy(id = Const.ParamsNames.FEEDBACK_SESSION_SENDREMINDEREMAIL + "_closing")
     private WebElement closingSessionEmailReminderButton;
 
@@ -84,7 +85,7 @@ public class InstructorFeedbackEditPage extends AppPage {
     @FindBy(id = "fsSaveLink")
     private WebElement fsSaveLink;
 
-    @FindBy(id = "fsDeleteLink")
+    @FindBy(id = "button_fsdelete")
     private WebElement fsDeleteLink;
 
     @FindBy(id = "button_openframe")
@@ -92,6 +93,12 @@ public class InstructorFeedbackEditPage extends AppPage {
 
     @FindBy(id = "button_submit_add")
     private WebElement addNewQuestionButton;
+
+    @FindBy(id = "button_add_template_modal")
+    private WebElement addTemplateModalLoadButton;
+
+    @FindBy(id = "button_add_template_submit")
+    private WebElement addTemplateQuestionButton;
 
     @FindBy(id = "button_done_editing")
     private WebElement doneEditingButton;
@@ -289,8 +296,8 @@ public class InstructorFeedbackEditPage extends AppPage {
         String idSuffix = getIdSuffix(qnNumber);
 
         WebElement pointsBox = browser.driver.findElement(By.id("constSumPoints" + idSuffix));
-        // backspace to clear the extra 1 when box is cleared.
-        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + points);
+        // Backspace to clear the extra 100 when box is cleared.
+        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.BACK_SPACE + points);
 
         executeScript("$(arguments[0]).change();", pointsBox);
     }
@@ -313,8 +320,8 @@ public class InstructorFeedbackEditPage extends AppPage {
         String idSuffix = getIdSuffix(qnNumber);
 
         WebElement pointsBox = browser.driver.findElement(By.id("constSumPointsForEachOption" + idSuffix));
-        // backspace to clear the extra 1 when box is cleared.
-        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + points);
+        // Backspace to clear the extra 100 when box is cleared.
+        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.BACK_SPACE + points);
 
         executeScript("$(arguments[0]).change();", pointsBox);
     }
@@ -337,8 +344,8 @@ public class InstructorFeedbackEditPage extends AppPage {
         String idSuffix = getIdSuffix(qnNumber);
 
         WebElement pointsBox = browser.driver.findElement(By.id("constSumPointsForEachRecipient" + idSuffix));
-        // backspace to clear the extra 1 when box is cleared.
-        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + points);
+        // Backspace to clear the extra 100 when box is cleared.
+        fillTextBox(pointsBox, Keys.RIGHT + " " + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.BACK_SPACE + points);
 
         executeScript("$(arguments[0]).change();", pointsBox);
     }
@@ -357,12 +364,236 @@ public class InstructorFeedbackEditPage extends AppPage {
         return getConstSumPointsForEachRecipientBox(NEW_QUESTION_NUM);
     }
 
-    public void fillRubricSubQuestionBox(String subQuestion, int qnNumber, int subQnIndex) {
+    public boolean isRubricColLeftMovable(int qnNumber, int colNumber) {
+        String elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_MOVE_COL_LEFT + "-" + qnNumber + "-" + colNumber;
+        WebElement moveColButton = browser.driver.findElement(By.id(elemId));
+
+        return moveColButton.getAttribute("disabled") == null;
+    }
+
+    public boolean isRubricColRightMovable(int qnNumber, int colNumber) {
+        String elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_MOVE_COL_RIGHT + "-" + qnNumber + "-" + colNumber;
+        WebElement moveColButton = browser.driver.findElement(By.id(elemId));
+
+        return moveColButton.getAttribute("disabled") == null;
+    }
+
+    /**
+     * Returns true if button is enabled and click was successful.
+     */
+    public boolean moveRubricColLeft(int qnNumber, int colNumber) {
+        return moveRubricCol(qnNumber, colNumber, true);
+    }
+
+    /**
+     * Returns true if button is enabled and click was successful.
+     */
+    public boolean moveRubricColRight(int qnNumber, int colNumber) {
+        return moveRubricCol(qnNumber, colNumber, false);
+    }
+
+    private boolean moveRubricCol(int qnNumber, int colNumber, boolean isMoveLeft) {
+        String elemId;
+
+        if (isMoveLeft) {
+            elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_MOVE_COL_LEFT + "-" + qnNumber + "-" + colNumber;
+        } else {
+            elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_MOVE_COL_RIGHT + "-" + qnNumber + "-" + colNumber;
+        }
+
+        WebElement moveColButton = browser.driver.findElement(By.id(elemId));
+
+        if (moveColButton.isEnabled()) {
+            click(moveColButton);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private String getRubricSubQuestionSelectorId(int qnNumber, int subQnIndex) {
         String idSuffix = getIdSuffix(qnNumber);
 
-        String elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_SUBQUESTION + idSuffix + "-" + subQnIndex;
+        return Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_SUBQUESTION + idSuffix + "-" + subQnIndex;
+    }
 
-        WebElement subQnBox = browser.driver.findElement(By.id(elemId));
+    public WebElement getRubricSubQuestionBox(int qnNumber, int subQnIndex) {
+        return browser.driver.findElement(By.id(getRubricSubQuestionSelectorId(qnNumber, subQnIndex)));
+    }
+
+    private String getRubricChoice(int qnNumber, int colNumber) {
+        String idSuffix = getIdSuffix(qnNumber);
+        String elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_CHOICE + idSuffix + "-" + colNumber;
+
+        return browser.driver.findElement(By.id(elemId)).getAttribute("value");
+    }
+
+    private String getRubricWeight(int qnNumber, int subQnIndex, int colNumber) {
+        String idSuffix = getIdSuffix(qnNumber);
+        String elemId =
+                Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_WEIGHT + idSuffix + "-" + subQnIndex + "-" + colNumber;
+
+        return browser.driver.findElement(By.id(elemId)).getAttribute("value");
+    }
+
+    private String getRubricDescription(int qnNumber, int subQnIndex, int choiceIndex) {
+        return getRubricDescriptionBox(qnNumber, subQnIndex, choiceIndex).getAttribute("value");
+    }
+
+    private boolean isRubricWeightsEnabled(int qnNumber) {
+        return browser.driver.findElement(By.id("rubricAssignWeights-" + qnNumber)).isSelected();
+    }
+
+    private boolean isRubricDescriptionBoxPresent(int qnNumber, int subQnIndex, int choiceIndex) {
+        return !browser.driver.findElements(By.id(getRubricDescriptionBoxId(qnNumber, subQnIndex, choiceIndex))).isEmpty();
+    }
+
+    /**
+     * Returns an array of the specified rubric column values.
+     * The values are organized in the array in the following manner:
+     * <p>
+     *   <strong>If weights are assigned: </strong>
+     *   [rubricChoice, rubricDescription-0, rubricWeight-0, rubricDescription-1, rubricWeights-1,...]
+     * </p>
+     * <p>
+     *   <strong>If weights are not assigned: </strong>
+     *   [rubricChoice, rubricDescription-0, rubricDescription-1, ...]
+     * </p>
+     */
+    public String[] getRubricColValues(int qnNumber, int choiceIndex) {
+        List<String> col = new ArrayList<>();
+
+        col.add(getRubricChoice(qnNumber, choiceIndex));
+
+        int subQnIndex = 0;
+
+        while (isRubricDescriptionBoxPresent(qnNumber, subQnIndex, choiceIndex)) {
+            col.add(getRubricDescription(qnNumber, subQnIndex, choiceIndex));
+
+            if (isRubricWeightsEnabled(qnNumber)) {
+                col.add(getRubricWeight(qnNumber, subQnIndex, choiceIndex));
+            }
+            subQnIndex++;
+        }
+
+        return col.toArray(new String[0]);
+    }
+
+    /**
+     * Checks if move left button of leftmost column is disabled.
+     * Checks if move right button of rightmost column is disabled.
+     * Checks if all other move column buttons are enabled.
+     * @param qnNumber question number.
+     * @param colIndexes An array containing column indexes in the order displayed in the UI.
+     */
+    public void verifyRubricColumnsMovability(int qnNumber, int[] colIndexes) {
+        int leftMostColIndex = colIndexes[0];
+        int rightMostColIndex = colIndexes[colIndexes.length - 1];
+
+        // checking move buttons of leftmost column
+        assertFalse(isRubricColLeftMovable(qnNumber, leftMostColIndex));
+        assertTrue(isRubricColRightMovable(qnNumber, leftMostColIndex));
+
+        // checking move buttons of last column
+        assertTrue(isRubricColLeftMovable(qnNumber, rightMostColIndex));
+        assertFalse(isRubricColRightMovable(qnNumber, rightMostColIndex));
+
+        // checking move buttons of remaining columns
+        for (int i = 1; i < colIndexes.length - 1; i++) {
+            assertTrue(isRubricColLeftMovable(qnNumber, colIndexes[i]));
+            assertTrue(isRubricColRightMovable(qnNumber, colIndexes[i]));
+        }
+    }
+
+    /**
+     * Checks if the values given in {@code columns} argument match with the
+     * actual values displayed. Also checks if move left/right buttons for
+     * each column is properly enabled or disabled. Assumes that there are
+     * at least 2 columns.
+     * @param qnNumber question number.
+     * @param colIndexes An array containing column indexes in the order displayed in the UI.
+     * @param columns Varargs parameter, where each parameter is {@code String[]} which denotes values
+     *         of a rubric column. Column values must be given in the order displayed in the UI.
+     */
+    public void verifyRubricQuestion(int qnNumber, int[] colIndexes, String[]... columns) {
+        // checking rubric column values - choice, description-0, weight-0, description-1, weight-1,....
+        for (int i = 0; i < colIndexes.length; i++) {
+            int colIndex = colIndexes[i];
+            String[] colValues = columns[i];
+            assertTrue(getRubricChoice(qnNumber, colIndex).equals(colValues[0]));
+
+            int index = 1;
+            int subQnIndex = 0;
+
+            while (index < colValues.length) {
+                assertTrue(getRubricDescription(qnNumber, subQnIndex, colIndex).equals(colValues[index]));
+                index++;
+
+                if (isRubricWeightsEnabled(qnNumber)) {
+                    assertTrue(getRubricWeight(qnNumber, subQnIndex, colIndex).equals(colValues[index]));
+                    index++;
+                }
+                subQnIndex++;
+            }
+        }
+
+        verifyRubricColumnsMovability(qnNumber, colIndexes);
+    }
+
+    /**
+     * Fills a single rubric column of index given by
+     * {@code choiceIndex}, with the values given in {@code values}.
+     * @param qnNumber question number.
+     * @param choiceIndex index of the column as in UI.
+     * @param values {@code String[]} which holds all column values from top to bottom.
+     */
+    public void fillRubricColumn(int qnNumber, int choiceIndex, String[] values) {
+        fillRubricChoiceBox(values[0], qnNumber, choiceIndex);
+
+        int index = 1;
+        int subQnIndex = 0;
+
+        // If weights are assigned, then rubric description values are at the odd indexes (i.e. 1,3,5,..),
+        // and rubric weights are at the even indexes (i.e. 2,4,..).
+        // Otherwise rubric description starts with index 1.
+        while (index < values.length) {
+            fillRubricDescriptionBox(values[index], qnNumber, subQnIndex, choiceIndex);
+            index++;
+
+            if (isRubricWeightsEnabled(qnNumber)) {
+                fillRubricWeightBox(values[index], qnNumber, subQnIndex, choiceIndex);
+                index++;
+            }
+            subQnIndex++;
+        }
+    }
+
+    /**
+     * Fills all rubric columns with respective indexes given in
+     * {@code colIndexes}, with respective values given in @{code colValues}.
+     * @param qnNumber question number.
+     * @param colIndexes An array containing column indexes in the order displayed in the UI.
+     * @param colValues Varargs parameter, where each parameter is {@code String[]} which denotes values
+     *         of a rubric column. Column values must be given in the order displayed in the UI.
+     */
+    public void fillAllRubricColumns(int qnNumber, int[] colIndexes, String[]... colValues) {
+        assertEquals(colIndexes.length, colValues.length);
+
+        for (int i = 0; i < colIndexes.length; i++) {
+            fillRubricColumn(qnNumber, colIndexes[i], colValues[i]);
+        }
+    }
+
+    public boolean isRubricSubQuestionBoxFocused(int qnNumber, int subQnIndex) {
+        WebElement subQnBox = getRubricSubQuestionBox(qnNumber, subQnIndex);
+
+        return subQnBox.equals(browser.driver.switchTo().activeElement());
+    }
+
+    public void fillRubricSubQuestionBox(String subQuestion, int qnNumber, int subQnIndex) {
+        WebElement subQnBox = getRubricSubQuestionBox(qnNumber, subQnIndex);
+
         fillTextBox(subQnBox, subQuestion);
     }
 
@@ -375,27 +606,42 @@ public class InstructorFeedbackEditPage extends AppPage {
         fillTextBox(subQnBox, choice);
     }
 
-    public void fillRubricWeightBox(String weight, int qnNumber, int choiceIndex) {
+    public WebElement getRubricWeightBox(int qnNumber, int subQnIndex, int choiceIndex) {
         String idSuffix = getIdSuffix(qnNumber);
+        String elementId =
+                Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_WEIGHT + idSuffix + "-" + subQnIndex + "-" + choiceIndex;
 
-        String elemid = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_WEIGHT + idSuffix + "-" + choiceIndex;
+        return browser.driver.findElement(By.id(elementId));
+    }
 
-        WebElement weightBox = browser.driver.findElement(By.id(elemid));
+    public void fillRubricWeightBox(String weight, int qnNumber, int subQnIndex, int choiceIndex) {
+        WebElement weightBox = getRubricWeightBox(qnNumber, subQnIndex, choiceIndex);
         fillTextBox(weightBox, weight);
     }
 
-    public void fillRubricWeightBoxForNewQuestion(String weight, int choiceIndex) {
-        fillRubricWeightBox(weight, NEW_QUESTION_NUM, choiceIndex);
+    public boolean isRubricWeightBoxFocused(int qnNumber, int subQnIndex, int choiceIndex) {
+        WebElement weightBox = getRubricWeightBox(qnNumber, subQnIndex, choiceIndex);
+
+        return weightBox.equals(browser.driver.switchTo().activeElement());
+    }
+
+    public void fillRubricWeightBoxForNewQuestion(String weight, int subQnIndex, int choiceIndex) {
+        fillRubricWeightBox(weight, NEW_QUESTION_NUM, subQnIndex, choiceIndex);
+    }
+
+    private String getRubricDescriptionBoxId(int qnNumber, int subQnIndex, int choiceIndex) {
+        String idSuffix = getIdSuffix(qnNumber);
+
+        return Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_DESCRIPTION + idSuffix + "-" + subQnIndex + "-" + choiceIndex;
+    }
+
+    private WebElement getRubricDescriptionBox(int qnNumber, int subQnIndex, int choiceIndex) {
+        return browser.driver.findElement(By.id(getRubricDescriptionBoxId(qnNumber, subQnIndex, choiceIndex)));
     }
 
     public void fillRubricDescriptionBox(String description, int qnNumber, int subQnIndex, int choiceIndex) {
-        String idSuffix = getIdSuffix(qnNumber);
-
-        String elemId = Const.ParamsNames.FEEDBACK_QUESTION_RUBRIC_DESCRIPTION
-                        + idSuffix + "-" + subQnIndex + "-" + choiceIndex;
-
-        WebElement subQnBox = browser.driver.findElement(By.id(elemId));
-        fillTextBox(subQnBox, description);
+        WebElement descriptionBox = getRubricDescriptionBox(qnNumber, subQnIndex, choiceIndex);
+        fillTextBox(descriptionBox, description);
     }
 
     public void clickQuestionEditForQuestion(int qnNumber) {
@@ -437,8 +683,7 @@ public class InstructorFeedbackEditPage extends AppPage {
     }
 
     public void clickFsCopyButton() {
-        waitForElementNotCovered(fscopyButton);
-        click(fscopyButton);
+        fscopyButton.click();
     }
 
     /**
@@ -471,12 +716,33 @@ public class InstructorFeedbackEditPage extends AppPage {
         click(addMcqOtherOptionCheckboxForNewQuestion);
     }
 
+    public void clickAddMcqOtherOptionCheckbox(int qnNumber) {
+        WebElement checkbox = browser.driver.findElement(By.id("mcqOtherOptionFlag-" + qnNumber));
+        click(checkbox);
+    }
+
+    public boolean isMcqOtherOptionCheckboxChecked(int qnNumber) {
+        return browser.driver.findElement(By.id("mcqOtherOptionFlag-" + qnNumber)).isSelected();
+    }
+
     public void clickAddMsqOtherOptionCheckboxForNewQuestion() {
         click(addMsqOtherOptionCheckboxForNewQuestion);
     }
 
     public WebElement getDeleteSessionLink() {
         return fsDeleteLink;
+    }
+
+    public boolean verifyDuplicateButtonIsDisplayed(int qnIndex) {
+        WebElement duplicateBn = browser.driver.findElement(
+                By.xpath("//a[contains(@class, 'btn-duplicate-qn')][@data-qnnumber='" + qnIndex + "']"));
+        return duplicateBn.isDisplayed();
+    }
+
+    public void clickDuplicateQuestionLink(int qnIndex) {
+        WebElement link = browser.driver.findElement(
+                By.xpath("//a[contains(@class, 'btn-duplicate-qn')][@data-qnnumber='" + qnIndex + "']"));
+        click(link);
     }
 
     public void clickDeleteQuestionLink(int qnIndex) {
@@ -489,6 +755,15 @@ public class InstructorFeedbackEditPage extends AppPage {
         WebElement link = browser.driver.findElement(
                 By.xpath("//a[contains(@class, 'btn-discard-changes')][@data-qnnumber='" + qnIndex + "']"));
         click(link);
+    }
+
+    public void clickAddMsqOtherOptionCheckbox(int qnNumber) {
+        WebElement checkbox = browser.driver.findElement(By.id("msqOtherOptionFlag-" + qnNumber));
+        click(checkbox);
+    }
+
+    public boolean isMsqOtherOptionCheckboxChecked(int qnNumber) {
+        return browser.driver.findElement(By.id("msqOtherOptionFlag-" + qnNumber)).isSelected();
     }
 
     public void clickDiscardChangesLinkForNewQuestion() {
@@ -514,25 +789,86 @@ public class InstructorFeedbackEditPage extends AppPage {
     }
 
     public void enableOtherVisibilityOptions(int qnNumber) {
-        clickVisibilityDropdown("OTHER", qnNumber);
+        clickVisibilityDropdownAndWaitForVisibilityMessageToLoad("OTHER", qnNumber);
     }
 
     public void enableOtherVisibilityOptionsForNewQuestion() {
         enableOtherVisibilityOptions(NEW_QUESTION_NUM);
     }
 
-    public void clickVisibilityDropdown(String optionValue, int qnNumber) {
-        click(browser.driver.findElement(By.cssSelector("#questionTable-" + qnNumber + " .visibility-options-dropdown "
-                                                        + "a[data-option-name=\"" + optionValue + "\"]")));
+    /**
+     * Selects the visibility option and waits for the visibility message to load.
+     * <b>Note: </b> The custom visibility options allow for more customization after the option is selected and
+     * the visibility message would not be loaded until the custom options are modified, which implies that there is no need
+     * to wait for the visibility message to load if the custom visibility options is selected.
+     */
+    public void clickVisibilityDropdownAndWaitForVisibilityMessageToLoad(String optionValue, int qnNumber) {
+        String customVisibilityOptionsValue = "OTHER";
+
+        // If the other option is selected, no AJAX request is made
+        if (!optionValue.equals(customVisibilityOptionsValue)) {
+            getjQueryAjaxHandler().waitForAjaxIfPresentThenRegisterHandlers();
+        }
+
+        WebElement visibilityOptionsDropdown =
+                browser.driver.findElement(By.cssSelector("#questionTable-" + qnNumber + " .visibility-options-dropdown"));
+
+        WebElement dropdownToggle = visibilityOptionsDropdown.findElement(By.tagName("button"));
+        scrollElementToCenterAndClick(dropdownToggle);
+
+        WebElement optionElement =
+                visibilityOptionsDropdown.findElement(By.cssSelector("a[data-option-name=\"" + optionValue + "\"]"));
+
+        // once the dropdown is assigned the class "open", the options should be visible unless not in the viewport
+        waitForElementToBeMemberOfClass(visibilityOptionsDropdown, "open");
+
+        // Scroll to the option because it may not be in the viewport
+        scrollElementToCenterAndClick(optionElement);
+
+        WebDriverWait wait = new WebDriverWait(browser.driver, TestProperties.TEST_TIMEOUT);
+        wait.until(ExpectedConditions.textToBePresentInElement(dropdownToggle, optionElement.getText()));
+
+        // If the other option is selected, no AJAX request is made
+        if (!optionValue.equals(customVisibilityOptionsValue)) {
+            getjQueryAjaxHandler().waitForRequestComplete();
+        }
     }
 
-    public void clickVisibilityDropdownForNewQuestion(String optionValue) {
-        clickVisibilityDropdown(optionValue, NEW_QUESTION_NUM);
+    /**
+     * Selects the visibility option and waits for the visibility message to load for the new question.
+     *
+     * @see InstructorFeedbackEditPage#clickVisibilityDropdownAndWaitForVisibilityMessageToLoad(String, int)
+     */
+    public void clickVisibilityDropdownForNewQuestionAndWaitForVisibilityMessageToLoad(String optionValue) {
+        clickVisibilityDropdownAndWaitForVisibilityMessageToLoad(optionValue, NEW_QUESTION_NUM);
     }
 
     public String getVisibilityDropdownLabel(int qnNumber) {
         return browser.driver.findElement(By.cssSelector("#questionTable-" + qnNumber
                                                          + " .visibility-options-dropdown button")).getText().trim();
+    }
+
+    public boolean isStaticQnNumberVisible(int qnNumber) {
+        try {
+            WebElement selectQuestionNumberStatic =
+                    browser.driver.findElement(By.id(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER_STATIC + "-" + qnNumber));
+            return selectQuestionNumberStatic.isDisplayed();
+
+        } catch (NoSuchElementException nsee) {
+            // new question doesn't have static question part
+            return false;
+        }
+    }
+
+    public boolean isMenuQnNumberVisible(int qnNumber) {
+        if (qnNumber != NEW_QUESTION_NUM) {
+            WebElement selectQuestionNumberDropdown =
+                    browser.driver.findElement(By.id(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER + "-" + qnNumber));
+            return selectQuestionNumberDropdown.isDisplayed();
+        }
+
+        WebElement retrievedQnTable = browser.driver.findElement(By.id("questionTable-" + qnNumber));
+        return retrievedQnTable.findElement(By.id(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER)).isDisplayed();
     }
 
     public String getVisibilityDropdownLabelForNewQuestion() {
@@ -542,6 +878,25 @@ public class InstructorFeedbackEditPage extends AppPage {
     public void clickAddQuestionButton() {
         click(addNewQuestionButton);
         waitForPageToLoad();
+    }
+
+    public void clickTemplateModalButton() {
+        addTemplateModalLoadButton.click();
+    }
+
+    public boolean isTemplateQuestionPanelExpanded(int qnNumber) {
+        // need to wait for the panel to be fully expanded before checking the class
+        By expandedPanelSelector = By.cssSelector("#addTemplateQuestion-" + qnNumber + " .in");
+        waitForElementPresence(expandedPanelSelector);
+        return browser.driver.findElement(expandedPanelSelector).isDisplayed();
+    }
+
+    public void clickAddTemplateQuestionButton() {
+        click(addTemplateQuestionButton);
+    }
+
+    public boolean isAddTemplateQuestionButtonEnabled() {
+        return addTemplateQuestionButton.isEnabled();
     }
 
     public void clickEditQuestionButton(int qnNumber) {
@@ -564,9 +919,32 @@ public class InstructorFeedbackEditPage extends AppPage {
         waitForPageToLoad();
     }
 
+    public WebElement getSelectQuestionNumberDropdown(int qnNumber) {
+        return browser.driver.findElement(By.id(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER + "-" + qnNumber));
+    }
+
+    public WebElement getSelectQuestionNumberStatic(int qnNumber) {
+        return browser.driver.findElement(By.id(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER_STATIC + "-" + qnNumber));
+    }
+
     public void selectQuestionNumber(int qnNumber, int newQnNumber) {
-        WebElement qnNumSelect = browser.driver.findElement(By.id("questionnum-" + qnNumber));
+        WebElement qnNumSelect = getSelectQuestionNumberDropdown(qnNumber);
         selectDropdownByVisibleValue(qnNumSelect, String.valueOf(newQnNumber));
+    }
+
+    public boolean isSelectQuestionNumberEnabled(int qnNumber) {
+        WebElement qnNumSelect = getSelectQuestionNumberDropdown(qnNumber);
+        return qnNumSelect.isEnabled();
+    }
+
+    public int getSelectedQuestionNumber(int qnNumber) {
+        if (isQuestionEnabled(qnNumber)) {
+            Select qnNumSelect = new Select(getSelectQuestionNumberDropdown(qnNumber));
+            return Integer.parseInt(qnNumSelect.getFirstSelectedOption().getText().trim());
+        }
+        //substring trims colon from the retrieved question number text
+        String questionNumber = getSelectQuestionNumberStatic(qnNumber).getText();
+        return Integer.parseInt(questionNumber.substring(0, questionNumber.length() - 1));
     }
 
     /**
@@ -576,22 +954,20 @@ public class InstructorFeedbackEditPage extends AppPage {
     public boolean verifyEditSessionBoxIsEnabled() {
         boolean isEditSessionEnabled = fsSaveLink.isDisplayed() && timezoneDropDown.isEnabled()
                                        // && "Session visible from" radio buttons
-                                       && neverSessionVisibleTimeButton.isEnabled()
                                        && defaultSessionVisibleTimeButton.isEnabled()
                                        && customSessionVisibleTimeButton.isEnabled()
                                        // && "Send emails for" checkboxes
                                        && closingSessionEmailReminderButton.isEnabled()
                                        && publishedSessionEmailReminderButton.isEnabled();
 
-        if (isEditSessionEnabled && !neverSessionVisibleTimeButton.isSelected()) {
+        if (isEditSessionEnabled) {
             isEditSessionEnabled = gracePeriodDropdown.isEnabled() // && Submission times inputs
                                    && startDateBox.isEnabled() && startTimeDropdown.isEnabled()
                                    && endDateBox.isEnabled() && endTimeDropdown.isEnabled()
                                    // && "Responses visible from" radio buttons
                                    && defaultResultsVisibleTimeButton.isEnabled()
                                    && customResultsVisibleTimeButton.isEnabled()
-                                   && manualResultsVisibleTimeButton.isEnabled()
-                                   && neverResultsVisibleTimeButton.isEnabled();
+                                   && manualResultsVisibleTimeButton.isEnabled();
         }
 
         return isEditSessionEnabled;
@@ -641,6 +1017,17 @@ public class InstructorFeedbackEditPage extends AppPage {
         return contribForm.isDisplayed() && addNewQuestionButton.isDisplayed();
     }
 
+    /*
+     * Checks if alert class is enabled on the visibility options div for the specified question number.
+     */
+    public boolean isAlertClassEnabledForVisibilityOptions(int questionNo) {
+        String visibilityOptionsDivXPath =
+                "//div[@id='questionTable-" + questionNo + "']//div[@class='visibility-checkbox-delegate panel-body']"
+                + "//b[@class='visibility-title']/../..";
+        return browser.driver.findElement(By.xpath(visibilityOptionsDivXPath))
+                .getAttribute("class").matches(".*\\balert alert-danger\\b.*");
+    }
+
     public boolean areDatesOfPreviousCurrentAndNextMonthEnabled() throws ParseException {
         return areDatesOfPreviousCurrentAndNextMonthEnabled(startDateBox)
                && areDatesOfPreviousCurrentAndNextMonthEnabled(endDateBox);
@@ -654,8 +1041,7 @@ public class InstructorFeedbackEditPage extends AppPage {
      */
     private boolean areDatesOfPreviousCurrentAndNextMonthEnabled(WebElement dateBox) throws ParseException {
 
-        Calendar previousMonth = Calendar.getInstance();
-        previousMonth.add(Calendar.MONTH, -1);
+        LocalDate previousMonth = LocalDate.now().minusMonths(1);
 
         // Navigate to the previous month
         if (!navigate(dateBox, previousMonth)) {
@@ -689,25 +1075,19 @@ public class InstructorFeedbackEditPage extends AppPage {
      * Navigate the datepicker associated with {@code dateBox} to the specified {@code date}.
      *
      * @param dateBox is a {@link WebElement} that triggers a datepicker
-     * @param date is a {@link Calendar} that specifies the date that needs to be navigated to
+     * @param date is a {@link LocalDate} that specifies the date that needs to be navigated to
      * @return true if navigated to the {@code date} successfully, otherwise
      *         false
      * @throws ParseException if the string in {@code dateBox} cannot be parsed
      */
-    private boolean navigate(WebElement dateBox, Calendar date) throws ParseException {
+    private boolean navigate(WebElement dateBox, LocalDate date) throws ParseException {
 
         click(dateBox);
+        LocalDate selectedDate = TimeHelper.parseDateFromSessionsForm(dateBox.getAttribute("value"));
+        String month = date.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        String year = Integer.toString(date.getYear());
 
-        Calendar selectedDate = Calendar.getInstance();
-
-        String month = date.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.ENGLISH);
-        String year = Integer.toString(date.get(Calendar.YEAR));
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
-
-        selectedDate.setTime(dateFormat.parse(dateBox.getAttribute("value")));
-
-        if (selectedDate.after(date)) {
+        if (selectedDate.isAfter(date)) {
 
             while (!getDatepickerMonth().equals(month) || !getDatepickerYear().equals(year)) {
 
@@ -745,8 +1125,20 @@ public class InstructorFeedbackEditPage extends AppPage {
         return browser.driver.findElement(by).getText();
     }
 
-    public void selectNewQuestionType(String questionType) {
+    public void selectNewQuestionTypeAndWaitForNewQuestionPanelReady(String questionType) {
         click(browser.driver.findElement(By.cssSelector("[data-questionType=" + questionType + "]")));
+
+        waitForNewQuestionPanelReady();
+    }
+
+    /**
+     * Waits for the new question panel to be ready, that is, all states initialized and all animations complete.
+     */
+    private void waitForNewQuestionPanelReady() {
+        // LEGACY IMPLEMENTATION: Coupled to the implementation instructorFeedbackEdit.js#showNewQuestionFrame
+        // Creating a new question will result in scrolling, so it is assumed that all initialization is completed after
+        // scrolling is complete.
+        waitForScrollingToComplete();
     }
 
     public void selectMcqGenerateOptionsFor(String generateFor, int questionNumber) {
@@ -761,6 +1153,13 @@ public class InstructorFeedbackEditPage extends AppPage {
                 generateFor);
     }
 
+    /**
+     * Selects the points distribution scheme for a const sum question.
+     *
+     * @param pointsOption Value of "Total" will select <i>Total number of points for all options</i> points distribution
+     *                     scheme, or "PerOption" will select <i>Number of points per option</i> points distribution scheme.
+     * @param questionNumber question number of the const sum question.
+     */
     public void selectConstSumPointsOptions(String pointsOption, int questionNumber) {
         markRadioButtonAsChecked(
                 browser.driver.findElement(By.id("constSumPoints" + pointsOption + "-" + questionNumber)));
@@ -780,12 +1179,16 @@ public class InstructorFeedbackEditPage extends AppPage {
         return recipientDropdownForQuestion.getAttribute("value");
     }
 
-    public void selectRecipientTypeForNewQuestion(String recipientType) {
-        selectDropdownByVisibleValue(browser.driver.findElement(By.id("recipienttype-" + NEW_QUESTION_NUM)), recipientType);
+    /**
+     * Selects the recipient type in the feedback path and waits for the corresponding visibility message to load.
+     */
+    public void selectRecipientTypeForNewQuestionAndWaitForVisibilityMessageToLoad(String recipientType) {
+        WebElement selectElement = browser.driver.findElement(By.id("recipienttype-" + NEW_QUESTION_NUM));
+        selectDropdownByVisibleValueAndHandleAjaxRequests(selectElement, recipientType);
     }
 
     public void clickNewQuestionButton() {
-        click(openNewQuestionButton);
+        scrollElementToCenterAndClick(openNewQuestionButton);
     }
 
     public boolean isAllFeedbackPathOptionsEnabledForNewQuestion() {
@@ -839,37 +1242,64 @@ public class InstructorFeedbackEditPage extends AppPage {
 
     public void selectGiverToBe(FeedbackParticipantType giverType, int questionNumber) {
         WebElement giverDropdown = browser.driver.findElement(By.id("givertype-" + questionNumber));
-        selectDropdownByActualValue(giverDropdown, giverType.toString());
+        selectDropdownByActualValueAndHandleAjaxRequests(giverDropdown, giverType.toString());
     }
 
     public void selectRecipientToBe(FeedbackParticipantType recipientType, int questionNumber) {
         WebElement giverDropdown = browser.driver.findElement(By.id("recipienttype-" + questionNumber));
-        selectDropdownByActualValue(giverDropdown, recipientType.toString());
+        selectDropdownByActualValueAndHandleAjaxRequests(giverDropdown, recipientType.toString());
     }
 
-    public void selectGiverToBeStudents() {
-        selectDropdownByVisibleValue(giverDropdownForNewQuestion, "Students in this course");
+    /**
+     * Selects the giver in the feedback path to be students in the course and waits for the corresponding visibility message
+     * to load.
+     */
+    public void selectGiverToBeStudentsAndWaitForVisibilityMessageToLoad() {
+        selectDropdownByVisibleValueAndHandleAjaxRequests(giverDropdownForNewQuestion, "Students in this course");
     }
 
-    public void selectGiverToBeInstructors() {
-        selectDropdownByVisibleValue(giverDropdownForNewQuestion, "Instructors in this course");
+    /**
+     * Selects the giver in the feedback path to be instructors in the course and waits for the corresponding visibility
+     * message to load.
+     */
+    public void selectGiverToBeInstructorsAndWaitForVisibilityMessageToLoad() {
+        selectDropdownByVisibleValueAndHandleAjaxRequests(giverDropdownForNewQuestion, "Instructors in this course");
     }
 
-    public void selectRecipientsToBeStudents() {
-        selectDropdownByVisibleValue(recipientDropdownForNewQuestion, "Other students in the course");
+    /**
+     * Selects the recipients in the feedback path to be other students in the course and waits for the corresponding
+     * visibility message to load.
+     */
+    public void selectRecipientsToBeStudentsAndWaitForVisibilityMessageToLoad() {
+        selectDropdownByVisibleValueAndHandleAjaxRequests(
+                recipientDropdownForNewQuestion, "Other students in the course");
     }
 
-    public void selectRecipientsToBeGiverTeamMembersAndGiver() {
-        selectDropdownByVisibleValue(recipientDropdownForNewQuestion, "Giver's team members and Giver");
-    }
-
-    public void selectRecipientsToBeInstructors() {
-        selectDropdownByVisibleValue(recipientDropdownForNewQuestion, "Instructors in the course");
-    }
-
-    public void selectRecipientsToBeStudents(int qnNumber) {
+    /**
+     * Selects the recipients in the feedback path to be other students in the course and waits for the corresponding
+     * visibility message to load.
+     */
+    public void selectRecipientsToBeStudentsAndWaitForVisibilityMessageToLoad(int qnNumber) {
         WebElement recipientDropdown = browser.driver.findElement(By.id("recipienttype-" + qnNumber));
-        selectDropdownByVisibleValue(recipientDropdown, "Other students in the course");
+        selectDropdownByVisibleValueAndHandleAjaxRequests(recipientDropdown, "Other students in the course");
+    }
+
+    /**
+     * Selects the recipients in the feedback path to be the team members and giver and waits for the corresponding
+     * visibility message to load.
+     */
+    public void selectRecipientsToBeGiverTeamMembersAndGiverAndWaitForVisibilityMessageToLoad() {
+        selectDropdownByVisibleValueAndHandleAjaxRequests(
+                recipientDropdownForNewQuestion, "Giver's team members and Giver");
+    }
+
+    /**
+     * Selects the recipients in the feedback path to be instructors in the course and waits for the corresponding
+     * visibility message to load.
+     */
+    public void selectRecipientsToBeInstructorsAndWaitForVisibilityMessageToLoad() {
+        selectDropdownByVisibleValueAndHandleAjaxRequests(
+                recipientDropdownForNewQuestion, "Instructors in the course");
     }
 
     public void enableOtherFeedbackPathOptions(int qnNumber) {
@@ -885,49 +1315,123 @@ public class InstructorFeedbackEditPage extends AppPage {
         enableOtherFeedbackPathOptions(NEW_QUESTION_NUM);
     }
 
-    public void editFeedbackSession(Date startTime, Date endTime, Text instructions, int gracePeriod) {
+    public void editFeedbackSession(LocalDateTime startTime, LocalDateTime endTime, String instructions, long gracePeriod) {
         // Select start date
         executeScript("$('#" + Const.ParamsNames.FEEDBACK_SESSION_STARTDATE + "')[0].value='"
-                      + TimeHelper.formatDate(startTime) + "';");
+                      + TimeHelper.formatDateForSessionsForm(startTime) + "';");
         selectDropdownByVisibleValue(startTimeDropdown,
                 TimeHelperExtension.convertToDisplayValueInTimeDropDown(startTime));
 
         // Select deadline date
         executeScript("$('#" + Const.ParamsNames.FEEDBACK_SESSION_ENDDATE + "')[0].value='"
-                      + TimeHelper.formatDate(endTime) + "';");
+                      + TimeHelper.formatDateForSessionsForm(endTime) + "';");
         selectDropdownByVisibleValue(endTimeDropdown,
                 TimeHelperExtension.convertToDisplayValueInTimeDropDown(endTime));
 
         // Fill in instructions
-        fillRichTextEditor("instructions", instructions.getValue());
+        fillRichTextEditor("instructions", instructions);
 
         // Select grace period
-        selectDropdownByVisibleValue(gracePeriodDropdown, Integer.toString(gracePeriod) + " mins");
+        selectDropdownByVisibleValue(gracePeriodDropdown, Long.toString(gracePeriod) + " mins");
 
         click(fsSaveLink);
         waitForPageToLoad();
     }
 
-    public InstructorFeedbacksPage deleteSession() {
-        clickAndConfirm(getDeleteSessionLink());
-        waitForPageToLoad();
-        return changePageType(InstructorFeedbacksPage.class);
+    public String getFeedbackSessionEndTimeValue() {
+        return getDropdownSelectedValue(endTimeDropdown);
     }
 
-    public InstructorFeedbacksPage clickDoneEditingLink() {
+    public InstructorFeedbackSessionsPage deleteSession() {
+        click(getDeleteSessionLink());
+        waitForPageToLoad();
+        return changePageType(InstructorFeedbackSessionsPage.class);
+    }
+
+    public InstructorFeedbackSessionsPage clickDoneEditingLink() {
         click(doneEditingButton);
         waitForPageToLoad();
-        return changePageType(InstructorFeedbacksPage.class);
+        return changePageType(InstructorFeedbackSessionsPage.class);
+    }
+
+    public boolean isMcqWeightBoxFocused(int qnNumber, int choiceIndex) {
+        WebElement weightBox = getMcqWeightBox(qnNumber, choiceIndex);
+
+        return weightBox.equals(browser.driver.switchTo().activeElement());
+    }
+
+    public boolean isMcqOtherWeightBoxFocused(int qnNumber) {
+        WebElement weightBox = getMcqOtherWeightBox(qnNumber);
+        return weightBox.equals(browser.driver.switchTo().activeElement());
     }
 
     public void fillMcqOptionForNewQuestion(int optionIndex, String optionText) {
-        WebElement optionBox = browser.driver.findElement(By.id("mcqOption-" + optionIndex + "-" + NEW_QUESTION_NUM));
+        fillMcqOption(NEW_QUESTION_NUM, optionIndex, optionText);
+    }
+
+    public void fillMcqOption(int qnNumber, int optionIndex, String optionText) {
+        WebElement optionBox = browser.driver.findElement(By.id("mcqOption-" + optionIndex + "-" + qnNumber));
         fillTextBox(optionBox, optionText);
     }
 
-    public void clickAddMoreMcqOptionLinkForNewQuestion() {
-        WebElement addMoreOptionLink = browser.driver.findElement(By.id("mcqAddOptionLink-" + NEW_QUESTION_NUM));
+    public void clickAddMoreMcqOptionLink(int qnNumber) {
+        WebElement addMoreOptionLink = browser.driver.findElement(By.id("mcqAddOptionLink-" + qnNumber));
         click(addMoreOptionLink);
+    }
+
+    public void clickAddMoreMcqOptionLinkForNewQuestion() {
+        clickAddMoreMcqOptionLink(NEW_QUESTION_NUM);
+    }
+
+    public WebElement getMcqHasAssignWeightsCheckbox(int qnNumber) {
+        return browser.driver.findElement(By.id("mcqHasAssignedWeights-" + qnNumber));
+    }
+
+    public void clickMcqHasAssignWeightsCheckbox(int qnNumber) {
+        WebElement mcqAssignWeightCheckbox = getMcqHasAssignWeightsCheckbox(qnNumber);
+        click(mcqAssignWeightCheckbox);
+    }
+
+    public void clickMcqAssignWeightCheckboxForNewQuestion() {
+        clickMcqHasAssignWeightsCheckbox(NEW_QUESTION_NUM);
+    }
+
+    public boolean isMcqHasAssignWeightCheckboxChecked(int qnNumber) {
+        WebElement checkbox = browser.driver.findElement(By.id("mcqHasAssignedWeights-" + qnNumber));
+        return checkbox.isSelected();
+    }
+
+    /**
+     * Get the specified Mcq weight WebElement.
+     * @param qnNumber Question number
+     * @param choiceIndex The index of the corresponding MCQ choice
+     * @return The MCQ weight WebElement for the specified choice.
+     */
+    public WebElement getMcqWeightBox(int qnNumber, int choiceIndex) {
+        String elementId = Const.ParamsNames.FEEDBACK_QUESTION_MCQ_WEIGHT + "-" + choiceIndex + "-" + qnNumber;
+
+        return browser.driver.findElement(By.id(elementId));
+    }
+
+    /**
+     * Returns the whole MCQ weight column.
+     */
+    public WebElement getMcqWeightsColumn(int qnNumber) {
+        return browser.driver.findElement(By.id("mcqWeights-" + qnNumber));
+    }
+
+    public WebElement getMcqOtherWeightBox(int qnNumber) {
+        return browser.driver.findElement(By.id("mcqOtherWeight-" + qnNumber));
+    }
+
+    public void fillMcqWeightBox(int qnNumber, int choiceIndex, String value) {
+        WebElement weightBox = getMcqWeightBox(qnNumber, choiceIndex);
+        fillTextBox(weightBox, value);
+    }
+
+    public void fillMcqOtherWeightBox(int qnNumber, String value) {
+        WebElement otherWeightBox = getMcqOtherWeightBox(qnNumber);
+        fillTextBox(otherWeightBox, value);
     }
 
     public void clickRemoveMcqOptionLink(int optionIndex, int qnIndex) {
@@ -942,16 +1446,52 @@ public class InstructorFeedbackEditPage extends AppPage {
         clickRemoveMcqOptionLink(optionIndex, NEW_QUESTION_NUM);
     }
 
-    public void clickGenerateOptionsCheckbox(int qnIndex) {
+    public void clickGenerateMcqOptionsCheckbox(int qnIndex) {
+        clickGenerateOptionsCheckbox(qnIndex, "generateMcqOptionsCheckbox");
+    }
+
+    public void clickGenerateMsqOptionsCheckbox(int qnIndex) {
+        clickGenerateOptionsCheckbox(qnIndex, "generateMsqOptionsCheckbox");
+    }
+
+    private void clickGenerateOptionsCheckbox(int qnIndex, String idPrefix) {
         String idSuffix = getIdSuffix(qnIndex);
 
-        WebElement generateOptionsCheckbox = browser.driver.findElement(By.id("generateOptionsCheckbox" + idSuffix));
+        WebElement generateOptionsCheckbox = browser.driver.findElement(By.id(idPrefix + idSuffix));
         click(generateOptionsCheckbox);
     }
 
     public void fillMsqOptionForNewQuestion(int optionIndex, String optionText) {
         WebElement optionBox = browser.driver.findElement(By.id("msqOption-" + optionIndex + "-" + NEW_QUESTION_NUM));
         fillTextBox(optionBox, optionText);
+    }
+
+    public void dragAndDropQuestionOption(String qnType, int qnNumber, int sourceIndex, int targetIndex) throws Exception {
+        WebElement draggedOptionElement = browser.driver.findElement(By.xpath("//div[@id='" + qnType + "OptionRow-"
+                + sourceIndex + "-" + qnNumber + "']//span[@class='glyphicon glyphicon-resize-vertical']"));
+        WebElement targetElement = browser.driver.findElement(By.xpath("//div[@id='" + qnType + "OptionRow-"
+                + targetIndex + "-" + qnNumber + "']//span[@class='glyphicon glyphicon-resize-vertical']"));
+
+        Actions builder = new Actions(browser.driver);
+        // drag option to target, move 10 units above target and release
+        // multiple movements are used to slow down drag movement and provide
+        // enough time for the grid to create empty slots
+        builder.clickAndHold(draggedOptionElement)
+                .moveToElement(targetElement)
+                .moveToElement(targetElement, 0, -10)
+                .release()
+                .build()
+                .perform();
+    }
+
+    public boolean isMsqWeightBoxFocused(int qnNumber, int choiceIndex) {
+        WebElement weightBox = getMsqWeightBox(qnNumber, choiceIndex);
+        return weightBox.equals(browser.driver.switchTo().activeElement());
+    }
+
+    public boolean isMsqOtherWeightBoxFocused(int qnNumber) {
+        WebElement weightBox = getMsqOtherWeightBox(qnNumber);
+        return weightBox.equals(browser.driver.switchTo().activeElement());
     }
 
     public void clickAddMoreMsqOptionLink(int qnIndex) {
@@ -973,6 +1513,241 @@ public class InstructorFeedbackEditPage extends AppPage {
 
     public void clickRemoveMsqOptionLinkForNewQuestion(int optionIndex) {
         clickRemoveMsqOptionLink(optionIndex, NEW_QUESTION_NUM);
+    }
+
+    private String getMsqMaxSelectableChoicesCheckboxId(int qnNumber) {
+        return "msqEnableMaxSelectableChoices-" + qnNumber;
+    }
+
+    private String getMsqMinSelectableChoicesCheckboxId(int qnNumber) {
+        return "msqEnableMinSelectableChoices-" + qnNumber;
+    }
+
+    private String getMsqMaxSelectableChoicesBoxId(int qnNumber) {
+        return "msqMaxSelectableChoices-" + qnNumber;
+    }
+
+    private String getMsqMinSelectableChoicesBoxId(int qnNumber) {
+        return "msqMinSelectableChoices-" + qnNumber;
+    }
+
+    public WebElement getMsqMaxSelectableChoicesElement(int qnNumber) {
+        String id = getMsqMaxSelectableChoicesCheckboxId(qnNumber);
+
+        return browser.driver.findElement(By.id(id));
+    }
+
+    private WebElement getMsqMinSelectableChoicesElement(int qnNumber) {
+        String id = getMsqMinSelectableChoicesCheckboxId(qnNumber);
+
+        return browser.driver.findElement(By.id(id));
+    }
+
+    public void toggleMsqMaxSelectableChoices(int qnNumber) {
+        click(getMsqMaxSelectableChoicesElement(qnNumber));
+    }
+
+    public void toggleMsqMinSelectableChoices(int qnNumber) {
+        click(getMsqMinSelectableChoicesElement(qnNumber));
+    }
+
+    public boolean isMsqMaxSelectableChoicesEnabled(int qnNumber) {
+        String id = getMsqMaxSelectableChoicesCheckboxId(qnNumber);
+
+        return browser.driver.findElement(By.id(id)).isSelected();
+    }
+
+    public boolean isMsqMinSelectableChoicesEnabled(int qnNumber) {
+        String id = getMsqMinSelectableChoicesCheckboxId(qnNumber);
+
+        return browser.driver.findElement(By.id(id)).isSelected();
+    }
+
+    public WebElement getMsqMaxSelectableChoicesBox(int qnNumber) {
+        return browser.driver.findElement(By.id(getMsqMaxSelectableChoicesBoxId(qnNumber)));
+    }
+
+    public WebElement getMsqMinSelectableChoicesBox(int qnNumber) {
+        return browser.driver.findElement(By.id(getMsqMinSelectableChoicesBoxId(qnNumber)));
+    }
+
+    public int getMinOfMsqMaxSelectableChoices(int qnNumber) {
+        return Integer.parseInt(getMsqMaxSelectableChoicesBox(qnNumber).getAttribute("min"));
+    }
+
+    public int getMaxOfMsqMaxSelectableChoices(int qnNumber) {
+        return Integer.parseInt(getMsqMaxSelectableChoicesBox(qnNumber).getAttribute("max"));
+    }
+
+    public int getMinOfMsqMinSelectableChoices(int qnNumber) {
+        return Integer.parseInt(getMsqMinSelectableChoicesBox(qnNumber).getAttribute("min"));
+    }
+
+    public int getMaxOfMsqMinSelectableChoices(int qnNumber) {
+        return Integer.parseInt(getMsqMinSelectableChoicesBox(qnNumber).getAttribute("max"));
+    }
+
+    public void fillMsqMinSelectableChoices(int qnNumber, String value) {
+        fillTextBox(getMsqMinSelectableChoicesBox(qnNumber), value);
+    }
+
+    public void fillMsqMaxSelectableChoices(int qnNumber, String value) {
+        fillTextBox(getMsqMaxSelectableChoicesBox(qnNumber), value);
+    }
+
+    public void fillMsqOption(int qnNumber, int optionIndex, String optionText) {
+        WebElement optionBox = browser.driver.findElement(By.id("msqOption-" + optionIndex + "-" + qnNumber));
+        fillTextBox(optionBox, optionText);
+    }
+
+    public WebElement getMsqHasAssignWeightsCheckbox(int qnNumber) {
+        return browser.driver.findElement(By.id("msqHasAssignedWeights-" + qnNumber));
+    }
+
+    public void clickMsqHasAssignWeightsCheckbox(int qnNumber) {
+        WebElement msqAssignWeightCheckbox = getMsqHasAssignWeightsCheckbox(qnNumber);
+        click(msqAssignWeightCheckbox);
+    }
+
+    public void clickMsqAssignWeightCheckboxForNewQuestion() {
+        clickMsqHasAssignWeightsCheckbox(NEW_QUESTION_NUM);
+    }
+
+    public boolean isMsqHasAssignWeightCheckboxChecked(int qnNumber) {
+        WebElement checkbox = browser.driver.findElement(By.id("msqHasAssignedWeights-" + qnNumber));
+        return checkbox.isSelected();
+    }
+
+    /**
+     * Get the specified Msq weight WebElement.
+     * @param qnNumber Question number
+     * @param choiceIndex The index of the corresponding MSQ choice
+     * @return The MSQ weight WebElement for the specified choice.
+     */
+    public WebElement getMsqWeightBox(int qnNumber, int choiceIndex) {
+        String elementId = Const.ParamsNames.FEEDBACK_QUESTION_MSQ_WEIGHT + "-" + choiceIndex + "-" + qnNumber;
+
+        return browser.driver.findElement(By.id(elementId));
+    }
+
+    /**
+     * Returns the whole MSQ weight column.
+     */
+    public WebElement getMsqWeightsColumn(int qnNumber) {
+        return browser.driver.findElement(By.id("msqWeights-" + qnNumber));
+    }
+
+    public WebElement getMsqOtherWeightBox(int qnNumber) {
+        return browser.driver.findElement(By.id("msqOtherWeight-" + qnNumber));
+    }
+
+    public void fillMsqWeightBox(int qnNumber, int choiceIndex, String value) {
+        WebElement weightBox = getMsqWeightBox(qnNumber, choiceIndex);
+        fillTextBox(weightBox, value);
+    }
+
+    public void fillMsqOtherWeightBox(int qnNumber, String value) {
+        WebElement otherWeightBox = getMsqOtherWeightBox(qnNumber);
+        fillTextBox(otherWeightBox, value);
+    }
+
+    public int getNumOfStudentsForFs() {
+        return Integer.parseInt(browser.driver.findElement(By.id("num-students")).getAttribute("value"));
+    }
+
+    public int getNumOfTeamsForFs() {
+        return Integer.parseInt(browser.driver.findElement(By.id("num-teams")).getAttribute("value"));
+    }
+
+    public int getNumOfInstructorsForFs() {
+        return Integer.parseInt(browser.driver.findElement(By.id("num-instructors")).getAttribute("value"));
+    }
+
+    private String getValue(WebElement elem) {
+        return (String) executeScript(String.format("return $('#%s').val();", elem.getAttribute("id")));
+    }
+
+    public int getMsqMinSelectableChoices(int qnNumber) {
+        assertTrue(isMsqMinSelectableChoicesEnabled(qnNumber));
+
+        return Integer.parseInt(getValue(getMsqMinSelectableChoicesBox(qnNumber)));
+    }
+
+    public int getMsqMaxSelectableChoices(int qnNumber) {
+        assertTrue(isMsqMaxSelectableChoicesEnabled(qnNumber));
+
+        return Integer.parseInt(getValue(getMsqMaxSelectableChoicesBox(qnNumber)));
+    }
+
+    private boolean isGenerateOptionsForMsqChecked(int qnNumber) {
+        return browser.driver.findElement(By.id("generateMsqOptionsCheckbox-" + qnNumber)).isSelected();
+    }
+
+    private String getGenerateOptionsForMsqValue(int qnNumber) {
+        Select options = new Select(browser.driver.findElement(By.id("msqGenerateForSelect-" + qnNumber)));
+
+        return options.getFirstSelectedOption().getText();
+    }
+
+    public int getNumOfMsqOptions(int qnNumber) {
+        if (isGenerateOptionsForMsqChecked(qnNumber)) {
+            String selectedOption = getGenerateOptionsForMsqValue(qnNumber);
+
+            switch (selectedOption) {
+            case "students":
+                return getNumOfStudentsForFs();
+            case "teams":
+                return getNumOfTeamsForFs();
+            case "instructors":
+                return getNumOfInstructorsForFs();
+            default:
+                return 0;
+            }
+        }
+
+        return browser.driver.findElements(
+                By.cssSelector("#msqChoices-" + qnNumber + " div[id^=\"msqOptionRow\"]")).size();
+    }
+
+    public void verifyMsqMinMaxSelectableChoices(int qnNumber) {
+        boolean isMinEnabled = isMsqMinSelectableChoicesEnabled(qnNumber);
+        boolean isMaxEnabled = isMsqMaxSelectableChoicesEnabled(qnNumber);
+
+        if (!isMinEnabled && !isMaxEnabled) {
+            return;
+        }
+
+        int numOfOptions = getNumOfMsqOptions(qnNumber);
+
+        if (isMinEnabled) {
+            int lowerLimit = getMinOfMsqMinSelectableChoices(qnNumber);
+            int upperLimit = getMaxOfMsqMinSelectableChoices(qnNumber);
+            int value = getMsqMinSelectableChoices(qnNumber);
+
+            assertTrue(lowerLimit == 1);
+            assertTrue(lowerLimit <= value);
+            assertTrue(value <= upperLimit);
+            assertTrue(upperLimit <= numOfOptions);
+        }
+
+        if (isMaxEnabled) {
+            int lowerLimit = getMinOfMsqMaxSelectableChoices(qnNumber);
+            int upperLimit = getMaxOfMsqMaxSelectableChoices(qnNumber);
+            int value = getMsqMaxSelectableChoices(qnNumber);
+
+            assertTrue(lowerLimit == 2);
+            assertTrue(lowerLimit <= value);
+            assertTrue(value <= upperLimit);
+            assertTrue(upperLimit <= numOfOptions);
+        }
+
+        if (isMinEnabled && isMaxEnabled) {
+            int minValue = getMsqMinSelectableChoices(qnNumber);
+            int maxValue = getMsqMaxSelectableChoices(qnNumber);
+
+            assertTrue(minValue <= maxValue);
+            assertEquals(getMaxOfMsqMinSelectableChoices(qnNumber), maxValue);
+        }
     }
 
     public void fillConstSumOption(int optionIndex, String optionText, int qnIndex) {
@@ -1005,6 +1780,20 @@ public class InstructorFeedbackEditPage extends AppPage {
 
     public void clickRemoveConstSumOptionLinkForNewQuestion(int optionIndex) {
         clickRemoveConstSumOptionLink(optionIndex, NEW_QUESTION_NUM);
+    }
+
+    public void clickDistributePointsOptionsCheckbox(int qnIndex) {
+        String idSuffix = getIdSuffix(qnIndex);
+
+        WebElement distributePointsOptionsCheckbox =
+                browser.driver.findElement(By.id("constSum_UnevenDistribution" + idSuffix));
+        click(distributePointsOptionsCheckbox);
+    }
+
+    public void selectConstSumDistributePointsOptions(String distributePointsFor, int questionNumber) {
+        selectDropdownByVisibleValue(
+                browser.driver.findElement(By.id("constSumDistributePointsSelect-" + questionNumber)),
+                distributePointsFor);
     }
 
     public void clickAssignWeightsCheckbox(int qnIndex) {
@@ -1108,16 +1897,174 @@ public class InstructorFeedbackEditPage extends AppPage {
         click(removeOptionLink);
     }
 
+    private String getQuestionType(int qnNumber) {
+        return browser.driver.findElement(By.cssSelector("#form_editquestion-" + qnNumber + " input[name='questiontype']"))
+                .getAttribute("value");
+    }
+
+    private boolean isRankOptionsQuestion(int qnIndex) {
+        return "RANK_OPTIONS".equals(getQuestionType(qnIndex));
+    }
+
     public int getNumOfOptionsInRankOptions(int qnIndex) {
-        WebElement rankOptionsTable = browser.driver.findElement(By.id("rankOptionTable-" + qnIndex));
-        List<WebElement> optionInputFields = rankOptionsTable
-                                                .findElements(
-                                                     By.cssSelector("input[id^='rankOption-']"));
-        return optionInputFields.size();
+        if (isRankOptionsQuestion(qnIndex)) {
+            WebElement rankOptionsTableRows = browser.driver.findElement(By.id("rankChoices-" + qnIndex));
+            List<WebElement> optionInputFields =
+                    rankOptionsTableRows.findElements(By.cssSelector("div[id^='rankOptionRow-']"));
+            return optionInputFields.size();
+        }
+
+        // For rank recipients
+        String recipient = getRecipientTypeForQuestion(qnIndex);
+
+        switch (recipient) {
+        case "STUDENTS":
+        case "INSTRUCTORS":
+        case "TEAMS":
+            return Integer.parseInt(browser.driver.findElement(By.id("num-" + recipient.toLowerCase()))
+                    .getAttribute("value"));
+        case "OWN_TEAM_MEMBERS":
+        case "OWN_TEAM_MEMBERS_INCLUDING_SELF":
+            return Integer.MAX_VALUE;
+        default:
+            // For SELF, OWN_TEAM, NONE
+            return 1;
+        }
     }
 
     public int getNumOfOptionsInRankOptionsForNewQuestion() {
         return getNumOfOptionsInRankOptions(NEW_QUESTION_NUM);
+    }
+
+    private WebElement getMinOptionsToBeRankedCheckbox(int qnNumber) {
+        if (isRankOptionsQuestion(qnNumber)) {
+            return browser.driver.findElement(By.id("minOptionsToBeRankedEnabled-" + qnNumber));
+        }
+
+        return browser.driver.findElement(By.id("minRecipientsToBeRankedEnabled-" + qnNumber));
+    }
+
+    private WebElement getMaxOptionsToBeRankedCheckbox(int qnNumber) {
+        if (isRankOptionsQuestion(qnNumber)) {
+            return browser.driver.findElement(By.id("maxOptionsToBeRankedEnabled-" + qnNumber));
+        }
+
+        return browser.driver.findElement(By.id("maxRecipientsToBeRankedEnabled-" + qnNumber));
+    }
+
+    public void toggleMinOptionsToBeRankedCheckbox(int qnNumber) {
+        click(getMinOptionsToBeRankedCheckbox(qnNumber));
+    }
+
+    public void toggleMaxOptionsToBeRankedCheckbox(int qnNumber) {
+        click(getMaxOptionsToBeRankedCheckbox(qnNumber));
+    }
+
+    public WebElement getMinOptionsToBeRankedInputElement(int qnNumber) {
+        if (isRankOptionsQuestion(qnNumber)) {
+            return browser.driver.findElement(By.id("minOptionsToBeRanked-" + qnNumber));
+        }
+
+        return browser.driver.findElement(By.id("minRecipientsToBeRanked-" + qnNumber));
+    }
+
+    public WebElement getMaxOptionsToBeRankedInputElement(int qnNumber) {
+        if (isRankOptionsQuestion(qnNumber)) {
+            return browser.driver.findElement(By.id("maxOptionsToBeRanked-" + qnNumber));
+        }
+
+        return browser.driver.findElement(By.id("maxRecipientsToBeRanked-" + qnNumber));
+    }
+
+    public boolean isMinOptionsToBeRankedEnabled(int qnNumber) {
+        return getMinOptionsToBeRankedCheckbox(qnNumber).isEnabled()
+                && getMinOptionsToBeRankedInputElement(qnNumber).isEnabled();
+    }
+
+    public boolean isMaxOptionsToBeRankedEnabled(int qnNumber) {
+        return getMaxOptionsToBeRankedCheckbox(qnNumber).isEnabled()
+                && getMaxOptionsToBeRankedInputElement(qnNumber).isEnabled();
+    }
+
+    private int getMinOfMinOptionsToBeSelectedInput(int qnNumber) {
+        WebElement elem = getMinOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("min"));
+    }
+
+    private int getMinOfMaxOptionsToBeSelectedInput(int qnNumber) {
+        WebElement elem = getMaxOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("min"));
+    }
+
+    private int getMaxOfMinOptionsToBeSelectedInput(int qnNumber) {
+        WebElement elem = getMinOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("max"));
+    }
+
+    private int getMaxOfMaxOptionsToBeSelectedInput(int qnNumber) {
+        WebElement elem = getMaxOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("max"));
+    }
+
+    public int getMinOptionsToBeRanked(int qnNumber) {
+        assertTrue(isMinOptionsToBeRankedEnabled(qnNumber));
+        WebElement elem = getMinOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("value"));
+    }
+
+    public int getMaxOptionsToBeRanked(int qnNumber) {
+        assertTrue(isMaxOptionsToBeRankedEnabled(qnNumber));
+        WebElement elem = getMaxOptionsToBeRankedInputElement(qnNumber);
+
+        return Integer.parseInt(elem.getAttribute("value"));
+    }
+
+    public void fillMinOptionsToBeRanked(int qnNumber, String value) {
+        WebElement rankMinOption = getMinOptionsToBeRankedInputElement(qnNumber);
+        fillTextBox(rankMinOption, value);
+    }
+
+    public void fillMaxOptionsToBeRanked(int qnNumber, String value) {
+        WebElement rankMaxOption = getMaxOptionsToBeRankedInputElement(qnNumber);
+        fillTextBox(rankMaxOption, value);
+    }
+
+    public void verifyMinMaxOptionsToBeSelectedRestrictions(int qnNumber) {
+        boolean isMinOptionsEnabled = isMinOptionsToBeRankedEnabled(qnNumber);
+        boolean isMaxOptionsEnabled = isMaxOptionsToBeRankedEnabled(qnNumber);
+
+        if (!isMinOptionsEnabled && !isMaxOptionsEnabled) {
+            return;
+        }
+
+        if (isMinOptionsEnabled) {
+            int value = getMinOptionsToBeRanked(qnNumber);
+            int upperLimit = getMaxOfMinOptionsToBeSelectedInput(qnNumber);
+
+            assertTrue(value <= upperLimit);
+            assertEquals(1, getMinOfMinOptionsToBeSelectedInput(qnNumber));
+        }
+
+        if (isMaxOptionsEnabled) {
+            int value = getMaxOptionsToBeRanked(qnNumber);
+            int upperLimit = getMaxOfMaxOptionsToBeSelectedInput(qnNumber);
+
+            assertTrue(value <= upperLimit);
+            assertEquals(getNumOfOptionsInRankOptions(qnNumber), getMaxOfMaxOptionsToBeSelectedInput(qnNumber));
+            assertEquals(1, getMinOfMaxOptionsToBeSelectedInput(qnNumber));
+        }
+
+        if (isMinOptionsEnabled && isMaxOptionsEnabled) {
+            int maxValue = getMaxOptionsToBeRanked(qnNumber);
+            int minValue = getMinOptionsToBeRanked(qnNumber);
+
+            assertTrue(minValue <= maxValue);
+        }
     }
 
     public FeedbackSubmitPage clickPreviewAsStudentButton() {
@@ -1133,6 +2080,20 @@ public class InstructorFeedbackEditPage extends AppPage {
         waitForPageToLoad();
         switchToNewWindow();
         return changePageType(FeedbackSubmitPage.class);
+    }
+
+    public void clickTemplateQuestionPanel(int questionNum) {
+        WebElement questionPanel = browser.driver.findElement(By.id("addTemplateQuestion-" + questionNum))
+                .findElement(By.className("panel-title"));
+
+        click(questionPanel);
+    }
+
+    public void clickTemplateQuestionModalCheckBox(int questionNum) {
+        WebElement questionCheckBox = browser.driver.findElement(By.id("addTemplateQuestion-" + questionNum))
+                .findElement(By.cssSelector("input"));
+
+        click(questionCheckBox);
     }
 
     public void clickCopyTableAtRow(int rowIndex) {
@@ -1221,6 +2182,22 @@ public class InstructorFeedbackEditPage extends AppPage {
         return getVisibilityOptions(questionNumber).isDisplayed();
     }
 
+    /**
+     * Waits and verifies that the texts of user status messages in the page are equal to the expected error texts.
+     * @see AppPage#waitForTextsForAllStatusMessagesToUserEquals(String, String...)
+     */
+    public void waitForTextsForAllStatusMessagesToUserEqualsErrorTexts(
+            String firstExpectedErrorText, String... remainingExpectedErrorTexts) {
+        // LEGACY IMPLEMENTATION: Status Message is scrolled to when we try to add an invalid question
+        // so we wait for no scrolling before verifying status message. This allows verification of status message to be
+        // faster because the text should already be visible. Any tests that follows will then also not get affected by the
+        // scrolling behavior.
+        // PROBABLE BETTER IMPLEMENTATION: All AJAX Status messages (not just error status messages) always cause scrolling
+        // so waiting for the status messages will include waiting for no scrolling before verifying the status messages.
+        waitForScrollingToComplete();
+        waitForTextsForAllStatusMessagesToUserEquals(firstExpectedErrorText, remainingExpectedErrorTexts);
+    }
+
     public WebElement getVisibilityOptionTableRow(int questionNumber, int optionRowNumber) {
         return getVisibilityOptions(questionNumber).findElement(
                 By.xpath("(table/tbody/tr|table/tbody/hide)[" + optionRowNumber + "]"));
@@ -1306,5 +2283,23 @@ public class InstructorFeedbackEditPage extends AppPage {
                                                        + "']." + checkboxClass);
         WebElement checkbox = browser.driver.findElement(checkboxSelector);
         return checkbox.isSelected();
+    }
+
+    public void clickEnableMinRankOptions(int questionNumber) {
+        WebElement minNumberOfOptionsToRankCheckbox = getMinOptionsToBeRankedCheckbox(questionNumber);
+
+        minNumberOfOptionsToRankCheckbox.click();
+    }
+
+    public void clickMinRankOptions(int questionNumber) {
+        WebElement minRecipientsToBeRankedInput = getMinOptionsToBeRankedInputElement(questionNumber);
+
+        minRecipientsToBeRankedInput.click();
+    }
+
+    public void clearMinRankOptions(int questionNumber) {
+        WebElement minRecipientsToBeRankedInput = getMinOptionsToBeRankedInputElement(questionNumber);
+
+        minRecipientsToBeRankedInput.clear();
     }
 }

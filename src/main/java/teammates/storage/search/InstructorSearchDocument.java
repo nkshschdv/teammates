@@ -1,6 +1,5 @@
 package teammates.storage.search;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,7 +12,7 @@ import teammates.common.datatransfer.InstructorSearchResultBundle;
 import teammates.common.datatransfer.attributes.CourseAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.util.Const;
-import teammates.common.util.JsonUtils;
+import teammates.common.util.SanitizationHelper;
 import teammates.common.util.StringHelper;
 
 /**
@@ -56,9 +55,6 @@ public class InstructorSearchDocument extends SearchDocument {
                 // searchableText is used to match the query string
                 .addField(Field.newBuilder().setName(Const.SearchDocumentField.SEARCHABLE_TEXT)
                                             .setText(searchableText))
-                // attribute field is used to convert a doc back to attribute
-                .addField(Field.newBuilder().setName(Const.SearchDocumentField.INSTRUCTOR_ATTRIBUTE)
-                                            .setText(JsonUtils.toJson(instructor)))
                 .setId(StringHelper.encrypt(instructor.key))
                 .build();
     }
@@ -67,7 +63,7 @@ public class InstructorSearchDocument extends SearchDocument {
      * Produces an {@link InstructorSearchResultBundle} from the {@code Results<ScoredDocument>} collection.
      *
      * <p>This method should be used by admin only since the searching does not restrict the
-     * visibility according to the logged-in user's google ID.
+     * visibility according to the logged-in user's google ID.</p>
      */
     public static InstructorSearchResultBundle fromResults(Results<ScoredDocument> results) {
         InstructorSearchResultBundle bundle = new InstructorSearchResultBundle();
@@ -76,12 +72,11 @@ public class InstructorSearchDocument extends SearchDocument {
         }
 
         for (ScoredDocument doc : results) {
-            InstructorAttributes instructor = JsonUtils.fromJson(
-                    doc.getOnlyField(Const.SearchDocumentField.INSTRUCTOR_ATTRIBUTE).getText(),
-                    InstructorAttributes.class);
-
-            if (instructorsDb.getInstructorForRegistrationKey(StringHelper.encrypt(instructor.key)) == null) {
-                instructorsDb.deleteDocument(instructor);
+            InstructorAttributes instructor = instructorsDb.getInstructorForRegistrationKey(doc.getId());
+            if (instructor == null) {
+                // search engine out of sync as SearchManager may fail to delete documents due to GAE error
+                // the chance is low and it is generally not a big problem
+                instructorsDb.deleteDocumentByEncryptedInstructorKey(doc.getId());
                 continue;
             }
 
@@ -96,27 +91,12 @@ public class InstructorSearchDocument extends SearchDocument {
 
     private static void sortInstructorResultList(List<InstructorAttributes> instructorList) {
 
-        Collections.sort(instructorList, new Comparator<InstructorAttributes>() {
-            @Override
-            public int compare(InstructorAttributes ins1, InstructorAttributes ins2) {
-                int compareResult = ins1.courseId.compareTo(ins2.courseId);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
+        instructorList.sort(Comparator.comparing((InstructorAttributes instructor) -> instructor.courseId)
+                //TODO TO REMOVE AFTER DATA MIGRATION
+                .thenComparing(instructor -> SanitizationHelper.desanitizeIfHtmlSanitized(instructor.role))
+                .thenComparing(instructor -> instructor.name)
+                .thenComparing(instructor -> instructor.email));
 
-                compareResult = ins1.role.compareTo(ins2.role);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                compareResult = ins1.name.compareTo(ins2.name);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                return ins1.email.compareTo(ins2.email);
-            }
-        });
     }
 
 }

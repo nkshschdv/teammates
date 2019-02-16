@@ -105,13 +105,18 @@ public class StudentAttributesFactory {
 
         String paramSection;
 
-        if (hasSection && columns.length > sectionColumnIndex) {
+        if (hasSection && columns.length > sectionColumnIndex && !columns[sectionColumnIndex].isEmpty()) {
             paramSection = StringHelper.removeExtraSpace(columns[sectionColumnIndex]);
         } else {
             paramSection = Const.DEFAULT_SECTION;
         }
 
-        return new StudentAttributes(paramSection, paramTeam, paramName, paramEmail, paramComment, courseId);
+        return StudentAttributes
+                .builder(courseId, paramName, paramEmail)
+                .withTeam(paramTeam)
+                .withSection(paramSection)
+                .withComments(paramComment)
+                .build();
     }
 
     private int locateColumnIndexes(String headerRow) throws EnrollException {

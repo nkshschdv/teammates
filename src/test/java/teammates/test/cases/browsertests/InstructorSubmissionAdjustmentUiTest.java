@@ -13,16 +13,19 @@ import teammates.common.datatransfer.attributes.StudentAttributes;
 import teammates.common.util.AppUrl;
 import teammates.common.util.Const;
 import teammates.common.util.ThreadHelper;
-import teammates.test.driver.BackDoor;
-import teammates.test.driver.Priority;
-import teammates.test.driver.TestProperties;
+import teammates.common.util.retry.MaximumRetriesExceededException;
+import teammates.common.util.retry.RetryableTaskReturns;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
+import teammates.e2e.util.BackDoor;
+import teammates.e2e.util.Priority;
+import teammates.e2e.util.TestProperties;
 import teammates.test.pageobjects.InstructorCourseEnrollPage;
 
 /**
  * Covers Ui aspect of submission adjustment for evaluations and feedbacks.
  */
 @Priority(1)
-public class InstructorSubmissionAdjustmentUiTest extends BaseUiTestCase {
+public class InstructorSubmissionAdjustmentUiTest extends BaseE2ETestCase {
     private InstructorCourseEnrollPage enrollPage;
 
     @Override
@@ -38,22 +41,14 @@ public class InstructorSubmissionAdjustmentUiTest extends BaseUiTestCase {
     }
 
     @Test
-    public void testAdjustmentOfSubsmission() {
+    public void testAdjustmentOfSubmission() throws MaximumRetriesExceededException {
 
         //load the enrollPage
         loadEnrollmentPage();
 
         ______TS("typical case: enroll new student to existing course");
-        StudentAttributes newStudent = new StudentAttributes();
-        newStudent.section = "None";
-        newStudent.team = "Team 1.1</td></div>'\"";
-        newStudent.course = "idOfTypicalCourse1";
-        newStudent.email = "random@g.tmt";
-        newStudent.name = "someName";
-        newStudent.comments = "comments";
 
-        String enrollString = "Section | Team | Name | Email | Comment" + Const.EOL
-                            + newStudent.toEnrollmentString();
+        String enrollString = "Section 1\tsomeName\tTeam1.1\trandom@g.tmt\tcomments\t";
 
         enrollPage.enroll(enrollString);
 
@@ -74,18 +69,31 @@ public class InstructorSubmissionAdjustmentUiTest extends BaseUiTestCase {
         String newTeam = "Team 1.2";
         student.team = newTeam;
 
-        enrollString = "Section | Team | Name | Email | Comment" + Const.EOL
-                     + student.toEnrollmentString();
+        enrollString = "None\t" + student.getTeam() + "\t"
+                + student.getName() + "\t" + student.getEmail() + "\t";
         enrollPage.enroll(enrollString);
 
-        int numberOfNewResponses =
-                getAllResponsesForStudentForSession(student, session.getFeedbackSessionName()).size();
-        assertEquals(0, numberOfNewResponses);
+        // It might take a while for the submission adjustment to persist (especially on the live server),
+        // during which the pre-existing submissions and responses would be counted.
+        // Hence, this needs to be retried several times until the count becomes zero.
+        getPersistenceRetryManager().runUntilSuccessful(new RetryableTaskReturns<Integer>(
+                "Assert outdated responses removed"
+        ) {
+            @Override
+            public Integer run() {
+                return getAllResponsesForStudentForSession(student, session.getFeedbackSessionName()).size();
+            }
+
+            @Override
+            public boolean isSuccessful(Integer numberOfResponses) {
+                return numberOfResponses == 0;
+            }
+        });
 
     }
 
     private void loadEnrollmentPage() {
-        AppUrl enrollUrl = createUrl(Const.ActionURIs.INSTRUCTOR_COURSE_ENROLL_PAGE)
+        AppUrl enrollUrl = createUrl(Const.WebPageURIs.INSTRUCTOR_COURSE_ENROLL_PAGE)
                             .withUserId(testData.instructors.get("instructor1OfCourse1").googleId)
                             .withCourseId(testData.courses.get("typicalCourse1").getId());
 
@@ -93,7 +101,7 @@ public class InstructorSubmissionAdjustmentUiTest extends BaseUiTestCase {
     }
 
     private List<FeedbackResponseAttributes> getAllTeamResponsesForStudent(StudentAttributes student) {
-        List<FeedbackResponseAttributes> returnList = new ArrayList<FeedbackResponseAttributes>();
+        List<FeedbackResponseAttributes> returnList = new ArrayList<>();
 
         List<FeedbackResponseAttributes> studentReceiverResponses = BackDoor
                 .getFeedbackResponsesForReceiverForCourse(student.course, student.email);
@@ -123,7 +131,7 @@ public class InstructorSubmissionAdjustmentUiTest extends BaseUiTestCase {
 
     private List<FeedbackResponseAttributes> getAllResponsesForStudentForSession(StudentAttributes student,
             String feedbackSessionName) {
-        List<FeedbackResponseAttributes> returnList = new ArrayList<FeedbackResponseAttributes>();
+        List<FeedbackResponseAttributes> returnList = new ArrayList<>();
 
         List<FeedbackResponseAttributes> allResponseOfStudent = getAllTeamResponsesForStudent(student);
 

@@ -37,14 +37,8 @@ public class InstructorsDbTest extends BaseComponentTestCase {
     }
 
     private void addInstructorsToDb() throws Exception {
-        Set<String> keys = dataBundle.instructors.keySet();
-        for (String i : keys) {
-            try {
-                instructorsDb.createEntity(dataBundle.instructors.get(i));
-            } catch (EntityAlreadyExistsException e) {
-                instructorsDb.updateInstructorByGoogleId(
-                        dataBundle.instructors.get(i));
-            }
+        for (InstructorAttributes instructor : dataBundle.instructors.values()) {
+            instructorsDb.createEntity(instructor);
         }
     }
 
@@ -61,7 +55,11 @@ public class InstructorsDbTest extends BaseComponentTestCase {
         String displayedName = InstructorAttributes.DEFAULT_DISPLAY_NAME;
         InstructorPrivileges privileges =
                 new InstructorPrivileges(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_COOWNER);
-        InstructorAttributes i = new InstructorAttributes(googleId, courseId, name, email, role, displayedName, privileges);
+        InstructorAttributes i = InstructorAttributes.builder(googleId, courseId, name, email)
+                .withRole(role)
+                .withDisplayedName(displayedName)
+                .withPrivileges(privileges)
+                .build();
 
         instructorsDb.deleteEntity(i);
         instructorsDb.createEntity(i);
@@ -70,51 +68,40 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: create a duplicate instructor");
 
-        try {
-            instructorsDb.createEntity(i);
-            signalFailureToDetectException();
-        } catch (EntityAlreadyExistsException e) {
-            AssertHelper.assertContains(String.format(InstructorsDb.ERROR_CREATE_ENTITY_ALREADY_EXISTS, "Instructor"),
-                                        e.getMessage());
-        }
+        EntityAlreadyExistsException eaee = assertThrows(EntityAlreadyExistsException.class,
+                () -> instructorsDb.createEntity(i));
+        AssertHelper.assertContains(String.format(InstructorsDb.ERROR_CREATE_ENTITY_ALREADY_EXISTS, "Instructor"),
+                eaee.getMessage());
 
         ______TS("Failure: create an instructor with invalid parameters");
 
         i.googleId = "invalid id with spaces";
-        try {
-            instructorsDb.createEntity(i);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            AssertHelper.assertContains(
-                    getPopulatedErrorMessage(
+        InvalidParametersException ipe = assertThrows(InvalidParametersException.class,
+                () -> instructorsDb.createEntity(i));
+        AssertHelper.assertContains(
+                getPopulatedErrorMessage(
                         FieldValidator.GOOGLE_ID_ERROR_MESSAGE, i.googleId,
                         FieldValidator.GOOGLE_ID_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
                         FieldValidator.GOOGLE_ID_MAX_LENGTH),
-                    e.getMessage());
-        }
+                ipe.getMessage());
 
         i.googleId = "valid.fresh.id";
         i.email = "invalid.email.tmt";
-        try {
-            instructorsDb.createEntity(i);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            AssertHelper.assertContains(
-                    getPopulatedErrorMessage(
+        i.role = "role invalid";
+        ipe = assertThrows(InvalidParametersException.class, () -> instructorsDb.createEntity(i));
+        AssertHelper.assertContains(
+                getPopulatedErrorMessage(
                         FieldValidator.EMAIL_ERROR_MESSAGE, i.email,
                         FieldValidator.EMAIL_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
-                        FieldValidator.EMAIL_MAX_LENGTH),
-                    e.getMessage());
-        }
+                        FieldValidator.EMAIL_MAX_LENGTH) + System.lineSeparator()
+                        + String.format(FieldValidator.ROLE_ERROR_MESSAGE, i.role),
+                ipe.getMessage());
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.createEntity(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsDb.createEntity(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -134,12 +121,10 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.getInstructorForEmail(null, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.getInstructorForEmail(null, null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -159,12 +144,9 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.getInstructorForGoogleId(null, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsDb.getInstructorForGoogleId(null, null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -189,41 +171,10 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.getInstructorForRegistrationKey(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
-    }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.getInstructorForRegistrationKey(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
 
-    @Test
-    public void testGetInstructorsForEmail() {
-
-        ______TS("Success: get instructors with specific email");
-
-        String email = "instructor1@course1.tmt";
-
-        List<InstructorAttributes> retrieved = instructorsDb.getInstructorsForEmail(email);
-        assertEquals(1, retrieved.size());
-
-        InstructorAttributes instructor = retrieved.get(0);
-
-        assertEquals("idOfTypicalCourse1", instructor.courseId);
-
-        ______TS("Failure: instructor does not exist");
-
-        retrieved = instructorsDb.getInstructorsForEmail("non-exist-email");
-        assertEquals(0, retrieved.size());
-
-        ______TS("Failure: null parameters");
-
-        try {
-            instructorsDb.getInstructorsForEmail(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
     }
 
     @Test
@@ -256,12 +207,10 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.getInstructorsForGoogleId(null, false);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.getInstructorsForGoogleId(null, false));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -274,7 +223,7 @@ public class InstructorsDbTest extends BaseComponentTestCase {
         List<InstructorAttributes> retrieved = instructorsDb.getInstructorsForCourse(courseId);
         assertEquals(5, retrieved.size());
 
-        List<String> idList = new ArrayList<String>();
+        List<String> idList = new ArrayList<>();
         idList.add("idOfInstructor1OfCourse1");
         idList.add("idOfInstructor2OfCourse1");
         idList.add("idOfInstructor3");
@@ -293,12 +242,8 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.getInstructorsForCourse(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsDb.getInstructorsForCourse(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
     }
 
     @Test
@@ -310,55 +255,83 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         instructorToEdit.name = "New Name";
         instructorToEdit.email = "InstrDbT.new-email@email.tmt";
-        instructorsDb.updateInstructorByGoogleId(instructorToEdit);
+        instructorToEdit.isArchived = true;
+        instructorToEdit.role = Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER;
+        instructorToEdit.isDisplayedToStudents = false;
+        instructorToEdit.displayedName = "New Displayed Name";
+        instructorToEdit.privileges = new InstructorPrivileges(
+                Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER);
+        InstructorAttributes updatedInstructor = instructorsDb.updateInstructorByGoogleId(
+                InstructorAttributes.updateOptionsWithGoogleIdBuilder(instructorToEdit.courseId, instructorToEdit.googleId)
+                        .withName(instructorToEdit.name)
+                        .withEmail(instructorToEdit.email)
+                        .withIsArchived(instructorToEdit.isArchived)
+                        .withRole(instructorToEdit.role)
+                        .withIsDisplayedToStudents(instructorToEdit.isDisplayedToStudents)
+                        .withDisplayedName(instructorToEdit.displayedName)
+                        .withPrivileges(instructorToEdit.privileges)
+                        .build());
 
-        InstructorAttributes instructorUpdated =
+        InstructorAttributes actualInstructor =
                 instructorsDb.getInstructorForGoogleId(instructorToEdit.courseId, instructorToEdit.googleId);
-        assertEquals(instructorToEdit.name, instructorUpdated.name);
-        assertEquals(instructorToEdit.email, instructorUpdated.email);
+        assertEquals(instructorToEdit.name, actualInstructor.name);
+        assertEquals(instructorToEdit.name, updatedInstructor.name);
+        assertEquals(instructorToEdit.email, actualInstructor.email);
+        assertEquals(instructorToEdit.email, updatedInstructor.email);
+        assertTrue(actualInstructor.isArchived);
+        assertTrue(updatedInstructor.isArchived);
+        assertEquals(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER, actualInstructor.role);
+        assertEquals(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER, updatedInstructor.role);
+        assertFalse(actualInstructor.isDisplayedToStudents);
+        assertFalse(updatedInstructor.isDisplayedToStudents);
+        assertEquals("New Displayed Name", actualInstructor.displayedName);
+        assertEquals("New Displayed Name", updatedInstructor.displayedName);
+        assertTrue(actualInstructor.hasObserverPrivileges());
+        assertTrue(updatedInstructor.hasObserverPrivileges());
+        // Verifying less privileged 'Observer' role did not return false positive in case old 'Manager' role is unchanged.
+        assertFalse(actualInstructor.hasManagerPrivileges());
+        assertFalse(updatedInstructor.hasManagerPrivileges());
 
         ______TS("Failure: invalid parameters");
 
         instructorToEdit.name = "";
         instructorToEdit.email = "aaa";
-        try {
-            instructorsDb.updateInstructorByGoogleId(instructorToEdit);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            AssertHelper.assertContains(
-                    getPopulatedErrorMessage(
-                        FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE, instructorToEdit.name,
-                        FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.REASON_EMPTY,
-                        FieldValidator.PERSON_NAME_MAX_LENGTH) + Const.EOL
-                    + getPopulatedErrorMessage(
-                          FieldValidator.EMAIL_ERROR_MESSAGE, instructorToEdit.email,
-                          FieldValidator.EMAIL_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
-                          FieldValidator.EMAIL_MAX_LENGTH),
-                    e.getMessage());
-        }
+        instructorToEdit.role = "invalid role";
+        InvalidParametersException ipe = assertThrows(InvalidParametersException.class,
+                () -> instructorsDb.updateInstructorByGoogleId(
+                        InstructorAttributes
+                                .updateOptionsWithGoogleIdBuilder(instructorToEdit.courseId, instructorToEdit.googleId)
+                                .withName(instructorToEdit.name)
+                                .withEmail(instructorToEdit.email)
+                                .withRole(instructorToEdit.role)
+                                .build()));
+        AssertHelper.assertContains(
+                getPopulatedEmptyStringErrorMessage(
+                        FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE_EMPTY_STRING,
+                        FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.PERSON_NAME_MAX_LENGTH)
+                        + System.lineSeparator()
+                        + getPopulatedErrorMessage(
+                        FieldValidator.EMAIL_ERROR_MESSAGE, instructorToEdit.email,
+                        FieldValidator.EMAIL_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
+                        FieldValidator.EMAIL_MAX_LENGTH) + System.lineSeparator()
+                        + String.format(FieldValidator.ROLE_ERROR_MESSAGE, instructorToEdit.role),
+                ipe.getMessage());
 
         ______TS("Failure: non-existent entity");
 
-        instructorToEdit.googleId = "idOfInstructor4";
-        instructorToEdit.name = "New Name 2";
-        instructorToEdit.email = "InstrDbT.new-email2@email.tmt";
-        try {
-            instructorsDb.updateInstructorByGoogleId(instructorToEdit);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            AssertHelper.assertContains(
-                        EntitiesDb.ERROR_UPDATE_NON_EXISTENT_ACCOUNT,
-                        e.getMessage());
-        }
+        InstructorAttributes.UpdateOptionsWithGoogleId updateOptions =
+                InstructorAttributes.updateOptionsWithGoogleIdBuilder(instructorToEdit.courseId, "idOfInstructor4")
+                        .withName("John Doe")
+                        .build();
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsDb.updateInstructorByGoogleId(updateOptions));
+        assertEquals(EntitiesDb.ERROR_UPDATE_NON_EXISTENT + updateOptions, ednee.getMessage());
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.updateInstructorByGoogleId(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.updateInstructorByGoogleId(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
     }
 
     @Test
@@ -371,55 +344,84 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         instructorToEdit.googleId = "new-id";
         instructorToEdit.name = "New Name";
-        instructorsDb.updateInstructorByEmail(instructorToEdit);
+        instructorToEdit.isArchived = true;
+        instructorToEdit.role = Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER;
+        instructorToEdit.isDisplayedToStudents = false;
+        instructorToEdit.displayedName = "New Displayed Name";
+        instructorToEdit.privileges = new InstructorPrivileges(
+                Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER);
+        InstructorAttributes updatedInstructor = instructorsDb.updateInstructorByEmail(
+                InstructorAttributes.updateOptionsWithEmailBuilder(instructorToEdit.courseId, instructorToEdit.email)
+                        .withGoogleId(instructorToEdit.googleId)
+                        .withName(instructorToEdit.name)
+                        .withIsArchived(instructorToEdit.isArchived)
+                        .withRole(instructorToEdit.role)
+                        .withIsDisplayedToStudents(instructorToEdit.isDisplayedToStudents)
+                        .withDisplayedName(instructorToEdit.displayedName)
+                        .withPrivileges(instructorToEdit.privileges)
+                        .build());
 
-        InstructorAttributes instructorUpdated =
+        InstructorAttributes actualInstructor =
                 instructorsDb.getInstructorForEmail(instructorToEdit.courseId, instructorToEdit.email);
-        assertEquals("new-id", instructorUpdated.googleId);
-        assertEquals("New Name", instructorUpdated.name);
+        assertEquals("new-id", actualInstructor.googleId);
+        assertEquals("new-id", updatedInstructor.googleId);
+        assertEquals("New Name", actualInstructor.name);
+        assertEquals("New Name", updatedInstructor.name);
+        assertTrue(actualInstructor.isArchived);
+        assertTrue(updatedInstructor.isArchived);
+        assertEquals(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER, actualInstructor.role);
+        assertEquals(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_OBSERVER, updatedInstructor.role);
+        assertFalse(actualInstructor.isDisplayedToStudents);
+        assertFalse(updatedInstructor.isDisplayedToStudents);
+        assertEquals("New Displayed Name", actualInstructor.displayedName);
+        assertEquals("New Displayed Name", updatedInstructor.displayedName);
+        assertTrue(actualInstructor.hasObserverPrivileges());
+        assertTrue(updatedInstructor.hasObserverPrivileges());
+        // Verifying less privileged 'Observer' role did not return false positive in case old 'CoOwner' role is unchanged.
+        assertFalse(actualInstructor.hasCoownerPrivileges());
+        assertFalse(updatedInstructor.hasCoownerPrivileges());
 
         ______TS("Failure: invalid parameters");
 
         instructorToEdit.googleId = "invalid id";
         instructorToEdit.name = "";
-        try {
-            instructorsDb.updateInstructorByEmail(instructorToEdit);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            AssertHelper.assertContains(
-                    getPopulatedErrorMessage(
+        instructorToEdit.role = "invalid role";
+        InvalidParametersException ipe = assertThrows(InvalidParametersException.class,
+                () -> instructorsDb.updateInstructorByEmail(
+                        InstructorAttributes.updateOptionsWithEmailBuilder(instructorToEdit.courseId, instructorToEdit.email)
+                                .withGoogleId(instructorToEdit.googleId)
+                                .withName(instructorToEdit.name)
+                                .withRole(instructorToEdit.role)
+                                .build()));
+        AssertHelper.assertContains(
+                getPopulatedErrorMessage(
                         FieldValidator.GOOGLE_ID_ERROR_MESSAGE, instructorToEdit.googleId,
                         FieldValidator.GOOGLE_ID_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
-                        FieldValidator.GOOGLE_ID_MAX_LENGTH) + Const.EOL
-                    + getPopulatedErrorMessage(
-                          FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE, instructorToEdit.name,
-                          FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.REASON_EMPTY,
-                          FieldValidator.PERSON_NAME_MAX_LENGTH),
-                    e.getMessage());
-        }
+                        FieldValidator.GOOGLE_ID_MAX_LENGTH) + System.lineSeparator()
+                        + getPopulatedEmptyStringErrorMessage(
+                        FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE_EMPTY_STRING,
+                        FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.PERSON_NAME_MAX_LENGTH)
+                        + System.lineSeparator()
+                        + String.format(FieldValidator.ROLE_ERROR_MESSAGE, instructorToEdit.role),
+                ipe.getMessage());
 
         ______TS("Failure: non-existent entity");
 
-        instructorToEdit.googleId = "idOfInstructor4";
-        instructorToEdit.name = "New Name 2";
-        instructorToEdit.email = "newEmail@email.tmt";
-        try {
-            instructorsDb.updateInstructorByEmail(instructorToEdit);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            AssertHelper.assertContains(
-                        EntitiesDb.ERROR_UPDATE_NON_EXISTENT_ACCOUNT,
-                        e.getMessage());
-        }
+        instructorToEdit.role = Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_MANAGER;
+        InstructorAttributes.UpdateOptionsWithEmail updateOptions =
+                InstructorAttributes.updateOptionsWithEmailBuilder(instructorToEdit.courseId, "random@email.tmt")
+                        .withGoogleId("idOfInstructor4")
+                        .build();
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsDb.updateInstructorByEmail(updateOptions));
+        assertEquals(EntitiesDb.ERROR_UPDATE_NON_EXISTENT + updateOptions, ednee.getMessage());
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.updateInstructorByEmail(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.updateInstructorByEmail(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -439,12 +441,9 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.deleteInstructor(null, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsDb.deleteInstructor(null, null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -464,12 +463,10 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.deleteInstructorsForGoogleId(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsDb.deleteInstructorsForGoogleId(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @Test
@@ -489,12 +486,9 @@ public class InstructorsDbTest extends BaseComponentTestCase {
 
         ______TS("Failure: null parameters");
 
-        try {
-            instructorsDb.deleteInstructorsForCourse(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsDb.deleteInstructorsForCourse(null));
+        assertEquals(Const.StatusCodes.DBLEVEL_NULL_INPUT, ae.getMessage());
+
     }
 
     @AfterClass

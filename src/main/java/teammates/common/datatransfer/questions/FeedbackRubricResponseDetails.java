@@ -68,7 +68,7 @@ public class FeedbackRubricResponseDetails extends FeedbackResponseDetails {
      * Initializes the answer list to have empty responses.
      */
     private void initializeEmptyAnswerList(int numSubQuestions) {
-        answer = new ArrayList<Integer>();
+        answer = new ArrayList<>();
         for (int i = 0; i < numSubQuestions; i++) {
             // -1 indicates no choice chosen
             answer.add(-1);
@@ -88,14 +88,14 @@ public class FeedbackRubricResponseDetails extends FeedbackResponseDetails {
             int chosenIndex = answer.get(i);
             String chosenChoice = "";
             if (chosenIndex == -1) {
-                chosenChoice = "<span class=\"color_neutral\"><i>"
+                chosenChoice = "<span class=\"color-neutral\"><i>"
                              + Const.INSTRUCTOR_FEEDBACK_RESULTS_MISSING_RESPONSE
                              + "</i></span>";
                 html.append(StringHelper.integerToLowerCaseAlphabeticalIndex(i + 1) + ") " + chosenChoice + "<br>");
             } else {
                 chosenChoice = SanitizationHelper.sanitizeForHtml(fqd.getRubricChoices().get(answer.get(i)));
                 html.append(StringHelper.integerToLowerCaseAlphabeticalIndex(i + 1) + ") " + chosenChoice
-                            + " <span class=\"color_neutral\"><i>(Choice " + (chosenIndex + 1)
+                            + " <span class=\"color-neutral\"><i>(Choice " + (chosenIndex + 1)
                             + ")</i></span><br>");
             }
 
@@ -121,9 +121,9 @@ public class FeedbackRubricResponseDetails extends FeedbackResponseDetails {
         List<String> subQuestions = fqd.getRubricSubQuestions();
         List<String> rubricChoices = fqd.getRubricChoices();
 
-        for (int i = 0; i < rubricChoices.size(); i++) {
+        for (String rubricChoice : rubricChoices) {
             tableHeaderHtml.append("<th class=\"text-center\">");
-            tableHeaderHtml.append(rubricChoices.get(i));
+            tableHeaderHtml.append(rubricChoice);
             tableHeaderHtml.append("</th>");
         }
 

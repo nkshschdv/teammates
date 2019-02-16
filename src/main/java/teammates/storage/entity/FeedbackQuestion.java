@@ -1,17 +1,17 @@
 package teammates.storage.entity;
 
-import java.util.Date;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
-import javax.jdo.listener.StoreCallback;
-
 import com.google.appengine.api.datastore.Text;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.annotation.OnSave;
+import com.googlecode.objectify.annotation.Translate;
+import com.googlecode.objectify.annotation.Unindex;
 
 import teammates.common.datatransfer.FeedbackParticipantType;
 import teammates.common.datatransfer.questions.FeedbackQuestionType;
@@ -20,81 +20,62 @@ import teammates.common.util.Const;
 /**
  * Represents a feedback question.
  */
-@PersistenceCapable
-public class FeedbackQuestion extends Entity implements StoreCallback {
+@Entity
+@Index
+public class FeedbackQuestion extends BaseEntity {
 
-    // TODO: where applicable, we should specify fields as "gae.unindexed" to prevent GAE from building unnecessary indexes.
+    // TODO: where applicable, we should specify fields as @Unindex to prevent GAE from building unnecessary indexes.
 
-    /**
-     * The name of the primary key of this entity type.
-     */
-    @NotPersistent
-    public static final String PRIMARY_KEY_NAME = getFieldWithPrimaryKeyAnnotation(FeedbackQuestion.class);
+    @Id
+    private Long feedbackQuestionId;
 
-    /**
-     * Setting this to true prevents changes to the lastUpdate time stamp. Set
-     * to true when using scripts to update entities when you want to preserve
-     * the lastUpdate time stamp.
-     **/
-    @NotPersistent
-    public boolean keepUpdateTimestamp;
-
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
-    @Extension(vendorName = "datanucleus", key = "gae.encoded-pk", value = "true")
-    private transient String feedbackQuestionId;
-
-    @Persistent
     private String feedbackSessionName;
 
-    @Persistent
     private String courseId;
 
-    // TODO: Do we need this field since creator of FS = creator of qn? (can be removed -damith)
-    @Persistent
-    private String creatorEmail;
-
-    // TODO: rename to questionMetaData, will require database conversion
+    /**
+     * Serialized {@link teammates.common.datatransfer.questions.FeedbackQuestionDetails} stored as a string.
+     *
+     * @see teammates.common.datatransfer.attributes.FeedbackQuestionAttributes#getQuestionDetails()
+     */
+    @Unindex
     private Text questionText;
 
+    @Unindex
     private Text questionDescription;
 
-    @Persistent
     private int questionNumber;
 
-    @Persistent
     private FeedbackQuestionType questionType;
 
-    @Persistent
     private FeedbackParticipantType giverType;
 
-    @Persistent
     private FeedbackParticipantType recipientType;
 
     // Check for consistency in questionLogic/questionAttributes.
     // (i.e. if type is own team, numberOfEntities must = 1).
-    @Persistent
     private int numberOfEntitiesToGiveFeedbackTo;
 
-    // We can actually query the list in JDOQL if needed.
-    @Persistent
-    private List<FeedbackParticipantType> showResponsesTo;
+    private List<FeedbackParticipantType> showResponsesTo = new ArrayList<>();
 
-    @Persistent
-    private List<FeedbackParticipantType> showGiverNameTo;
+    private List<FeedbackParticipantType> showGiverNameTo = new ArrayList<>();
 
-    @Persistent
-    private List<FeedbackParticipantType> showRecipientNameTo;
+    private List<FeedbackParticipantType> showRecipientNameTo = new ArrayList<>();
 
-    @Persistent
-    private Date createdAt;
+    @Translate(InstantTranslatorFactory.class)
+    private Instant createdAt;
 
-    @Persistent
-    private Date updatedAt;
+    @Translate(InstantTranslatorFactory.class)
+    private Instant updatedAt;
+
+    @SuppressWarnings("unused")
+    private FeedbackQuestion() {
+        // required by Objectify
+    }
 
     public FeedbackQuestion(
-            String feedbackSessionName, String courseId, String creatorEmail,
-            Text questionText, Text questionDescription, int questionNumber, FeedbackQuestionType questionType,
+            String feedbackSessionName, String courseId,
+            String questionText, String questionDescription, int questionNumber, FeedbackQuestionType questionType,
             FeedbackParticipantType giverType,
             FeedbackParticipantType recipientType,
             int numberOfEntitiesToGiveFeedbackTo,
@@ -105,47 +86,40 @@ public class FeedbackQuestion extends Entity implements StoreCallback {
         this.feedbackQuestionId = null; // Allow GAE to generate key.
         this.feedbackSessionName = feedbackSessionName;
         this.courseId = courseId;
-        this.creatorEmail = creatorEmail;
-        this.questionText = questionText;
-        this.questionDescription = questionDescription;
+        setQuestionText(questionText);
+        setQuestionDescription(questionDescription);
         this.questionNumber = questionNumber;
         this.questionType = questionType;
         this.giverType = giverType;
         this.recipientType = recipientType;
         this.numberOfEntitiesToGiveFeedbackTo = numberOfEntitiesToGiveFeedbackTo;
-        this.showResponsesTo = showResponsesTo;
-        this.showGiverNameTo = showGiverNameTo;
-        this.showRecipientNameTo = showRecipientNameTo;
-        this.setCreatedAt(new Date());
+        this.showResponsesTo = showResponsesTo == null ? new ArrayList<FeedbackParticipantType>() : showResponsesTo;
+        this.showGiverNameTo = showGiverNameTo == null ? new ArrayList<FeedbackParticipantType>() : showGiverNameTo;
+        this.showRecipientNameTo =
+                showRecipientNameTo == null ? new ArrayList<FeedbackParticipantType>() : showRecipientNameTo;
+        this.setCreatedAt(Instant.now());
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt == null ? Const.TIME_REPRESENTS_DEFAULT_TIMESTAMP : createdAt;
     }
 
-    public Date getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt == null ? Const.TIME_REPRESENTS_DEFAULT_TIMESTAMP : updatedAt;
     }
 
-    public void setCreatedAt(Date newDate) {
+    public void setCreatedAt(Instant newDate) {
         this.createdAt = newDate;
         setLastUpdate(newDate);
     }
 
-    public void setLastUpdate(Date newDate) {
-        if (!keepUpdateTimestamp) {
-            this.updatedAt = newDate;
-        }
+    public void setLastUpdate(Instant newDate) {
+        this.updatedAt = newDate;
     }
 
     public String getId() {
-        return feedbackQuestionId;
+        return Key.create(FeedbackQuestion.class, feedbackQuestionId).toWebSafeString();
     }
-
-    /* Auto generated. Don't set this.
-    public void setFeedbackQuestionId(String feedbackQuestionId) {
-        this.feedbackQuestionId = feedbackQuestionId;
-    }*/
 
     public String getFeedbackSessionName() {
         return feedbackSessionName;
@@ -163,28 +137,20 @@ public class FeedbackQuestion extends Entity implements StoreCallback {
         this.courseId = courseId;
     }
 
-    public String getCreatorEmail() {
-        return creatorEmail;
+    public String getQuestionMetaData() {
+        return questionText == null ? null : questionText.getValue();
     }
 
-    public void setCreatorEmail(String creatorEmail) {
-        this.creatorEmail = creatorEmail;
+    public void setQuestionText(String questionText) {
+        this.questionText = questionText == null ? null : new Text(questionText);
     }
 
-    public Text getQuestionMetaData() {
-        return questionText;
+    public String getQuestionDescription() {
+        return questionDescription == null ? null : questionDescription.getValue();
     }
 
-    public void setQuestionText(Text questionText) {
-        this.questionText = questionText;
-    }
-
-    public Text getQuestionDescription() {
-        return questionDescription;
-    }
-
-    public void setQuestionDescription(Text questionDescription) {
-        this.questionDescription = questionDescription;
+    public void setQuestionDescription(String questionDescription) {
+        this.questionDescription = questionDescription == null ? null : new Text(questionDescription);
     }
 
     public FeedbackQuestionType getQuestionType() {
@@ -253,11 +219,8 @@ public class FeedbackQuestion extends Entity implements StoreCallback {
         this.showRecipientNameTo = showRecipientNameTo;
     }
 
-    /**
-     * Called by jdo before storing takes place.
-     */
-    @Override
-    public void jdoPreStore() {
-        this.setLastUpdate(new Date());
+    @OnSave
+    public void updateLastUpdateTimestamp() {
+        this.setLastUpdate(Instant.now());
     }
 }

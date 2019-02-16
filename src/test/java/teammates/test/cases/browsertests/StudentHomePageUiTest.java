@@ -1,20 +1,23 @@
 package teammates.test.cases.browsertests;
 
+import java.time.Instant;
+
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.util.AppUrl;
 import teammates.common.util.Const;
-import teammates.common.util.TimeHelper;
-import teammates.test.driver.BackDoor;
-import teammates.test.driver.TestProperties;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
+import teammates.e2e.util.BackDoor;
+import teammates.e2e.util.TestProperties;
 import teammates.test.pageobjects.StudentHelpPage;
 import teammates.test.pageobjects.StudentHomePage;
 
 /**
  * SUT: {@link Const.ActionURIs#STUDENT_HOME_PAGE}.
  */
-public class StudentHomePageUiTest extends BaseUiTestCase {
+public class StudentHomePageUiTest extends BaseE2ETestCase {
     private StudentHomePage studentHome;
 
     @Override
@@ -27,7 +30,10 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
         String student1Email = student1GoogleId + "@gmail.com";
         testData.accounts.get("alice.tmms").googleId = student1GoogleId;
         testData.accounts.get("alice.tmms").email = student1Email;
+
+        // This student's name is Amy Betsy and has a registered account but yet to join course
         testData.students.get("alice.tmms@SHomeUiT.CS2104").email = student1Email;
+
         testData.students.get("alice.tmms@SHomeUiT.CS1101").googleId = student1GoogleId;
         testData.students.get("alice.tmms@SHomeUiT.CS1101").email = student1Email;
         testData.students.get("alice.tmms@SHomeUiT.CS4215").googleId = student1GoogleId;
@@ -39,7 +45,7 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
 
         FeedbackSessionAttributes gracedFeedbackSession =
                 BackDoor.getFeedbackSession("SHomeUiT.CS2104", "Graced Feedback Session");
-        gracedFeedbackSession.setEndTime(TimeHelper.getDateOffsetToCurrentTime(0));
+        gracedFeedbackSession.setEndTime(Instant.now());
         BackDoor.editFeedbackSession(gracedFeedbackSession);
     }
 
@@ -84,18 +90,26 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
         // this test uses the accounts from test.properties
         studentHome.verifyHtmlMainContent("/studentHomeHTML.html");
 
-        AppUrl detailsPageUrl = createUrl(Const.ActionURIs.STUDENT_HOME_PAGE)
+        AppUrl detailsPageUrl = createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE)
                              .withUserId(testData.students.get("SHomeUiT.charlie.d@SHomeUiT.CS2104").googleId);
 
         StudentHomePage studentHomePage = loginAdminToPage(detailsPageUrl, StudentHomePage.class);
 
         studentHomePage.verifyHtmlMainContent("/studentHomeTypicalHTML.html");
 
+        ______TS("content: requires sanitization");
+
+        detailsPageUrl = createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE)
+                            .withUserId(testData.students.get("SHomeUiT.student1InTestingSanitizationCourse").googleId);
+
+        studentHomePage = loginAdminToPage(detailsPageUrl, StudentHomePage.class);
+
+        studentHomePage.verifyHtmlMainContent("/studentHomeTypicalTestingSanitization.html");
     }
 
     private void testLinks() {
 
-        AppUrl homePageUrl = createUrl(Const.ActionURIs.STUDENT_HOME_PAGE)
+        AppUrl homePageUrl = createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE)
                 .withUserId(testData.students.get("SHomeUiT.charlie.d@SHomeUiT.CS2104").googleId);
 
         StudentHomePage studentHomePage = loginAdminToPage(homePageUrl, StudentHomePage.class);
@@ -109,7 +123,7 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
 
         studentHomePage.clickViewTeam();
 
-        AppUrl detailsPageUrl = createUrl(Const.ActionURIs.STUDENT_COURSE_DETAILS_PAGE)
+        AppUrl detailsPageUrl = createUrl(Const.WebPageURIs.STUDENT_COURSE_DETAILS_PAGE)
                 .withUserId(testData.students.get("SHomeUiT.charlie.d@SHomeUiT.CS1101").googleId)
                 .withCourseId(testData.students.get("SHomeUiT.charlie.d@SHomeUiT.CS1101").course);
         assertEquals(detailsPageUrl.toAbsoluteString(), browser.driver.getCurrentUrl());
@@ -136,7 +150,8 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
 
         ______TS("link: link of Grace period feedback");
 
-        assertEquals("true", studentHomePage.getViewFeedbackButton("Graced Feedback Session").getAttribute("disabled"));
+        assertTrue(studentHomePage.getViewFeedbackButton("Graced Feedback Session")
+                .getAttribute("class").contains("disabled"));
 
         studentHomePage.clickSubmitFeedbackButton("Graced Feedback Session");
         studentHomePage.reloadPage();
@@ -149,7 +164,8 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
 
         ______TS("link: link of pending feedback");
 
-        assertEquals("true", studentHomePage.getViewFeedbackButton("First Feedback Session").getAttribute("disabled"));
+        assertTrue(studentHomePage.getViewFeedbackButton("First Feedback Session")
+                .getAttribute("class").contains("disabled"));
 
         studentHomePage.clickSubmitFeedbackButton("First Feedback Session");
         studentHomePage.reloadPage();
@@ -162,7 +178,7 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
 
     private void testLinkAndContentAfterDelete() throws Exception {
 
-        AppUrl detailsPageUrl = createUrl(Const.ActionURIs.STUDENT_HOME_PAGE)
+        AppUrl detailsPageUrl = createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE)
                              .withUserId(testData.students.get("SHomeUiT.charlie.d@SHomeUiT.CS2104").googleId);
 
         StudentHomePage studentHomePage = loginAdminToPage(detailsPageUrl, StudentHomePage.class);
@@ -177,12 +193,27 @@ public class StudentHomePageUiTest extends BaseUiTestCase {
     }
 
     private void loginWithPersistenceProblem() {
-        AppUrl homeUrl = ((AppUrl) createUrl(Const.ActionURIs.STUDENT_HOME_PAGE)
+        AppUrl homeUrl = ((AppUrl) createUrl(Const.WebPageURIs.STUDENT_HOME_PAGE)
                     .withParam(Const.ParamsNames.CHECK_PERSISTENCE_COURSE, "SHomeUiT.CS2104"))
                     .withUserId("unreg_user");
 
         studentHome = loginAdminToPage(homeUrl, StudentHomePage.class);
 
+    }
+
+    @AfterClass
+    public void classTearDown() {
+        // The courses of test student1 account is not the same as `StudentProfilePageUiTest`
+        // so it has to be cleared before running that test. This is the reason why `StudentProfilePageUiTest`
+        // would fail if we don't remove the data bundle in this test.
+
+        // Since the account of user being logged in is shared in this test and `StudentProfilePageUiTest`,
+        // we need to explicitly remove the data bundle of tests.
+        // The test data needs to be removed for both `StudentHomePageUiTest` and `StudentProfilePageUiTest`
+        // as the tests can run in any order.
+
+        // See `BackDoor#removeAndRestoreDataBundle(DataBundle))` for more details.
+        BackDoor.removeDataBundle(testData);
     }
 
 }

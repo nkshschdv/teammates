@@ -1,14 +1,11 @@
 package teammates.ui.controller;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import teammates.common.datatransfer.FeedbackSessionResultsBundle;
 import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
-import teammates.common.datatransfer.attributes.SessionAttributes;
 import teammates.common.datatransfer.attributes.StudentAttributes;
 import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.util.Assumption;
@@ -40,27 +37,23 @@ public class InstructorStudentRecordsAjaxPageAction extends Action {
             statusToUser.add(new StatusMessage(Const.StatusMessages.STUDENT_NOT_FOUND_FOR_RECORDS,
                                                StatusMessageColor.DANGER));
             isError = true;
-            return createRedirectResult(Const.ActionURIs.INSTRUCTOR_HOME_PAGE);
+            return createRedirectResult(Const.WebPageURIs.INSTRUCTOR_HOME_PAGE);
         }
 
         List<FeedbackSessionAttributes> feedbacks = logic.getFeedbackSessionsListForInstructor(account.googleId, false);
 
         filterFeedbackSessions(courseId, feedbacks, instructor, student);
 
-        List<SessionAttributes> sessions = new ArrayList<SessionAttributes>();
+        List<FeedbackSessionAttributes> sessions = new ArrayList<>();
         sessions.addAll(feedbacks);
-        Collections.sort(sessions, SessionAttributes.DESCENDING_ORDER);
+        sessions.sort(FeedbackSessionAttributes.DESCENDING_ORDER);
 
-        List<FeedbackSessionResultsBundle> results = new ArrayList<FeedbackSessionResultsBundle>();
-        for (SessionAttributes session : sessions) {
-            if (session instanceof FeedbackSessionAttributes) {
-                if (!targetSessionName.isEmpty() && targetSessionName.equals(session.getSessionName())) {
-                    FeedbackSessionResultsBundle result = logic.getFeedbackSessionResultsForInstructor(
-                                                    session.getSessionName(), courseId, instructor.email);
-                    results.add(result);
-                }
-            } else {
-                Assumption.fail("Unknown session type");
+        List<FeedbackSessionResultsBundle> results = new ArrayList<>();
+        for (FeedbackSessionAttributes session : sessions) {
+            if (!targetSessionName.isEmpty() && targetSessionName.equals(session.getFeedbackSessionName())) {
+                FeedbackSessionResultsBundle result = logic.getFeedbackSessionResultsForInstructor(
+                        session.getFeedbackSessionName(), courseId, instructor.email);
+                results.add(result);
             }
         }
         statusToAdmin = "instructorStudentRecords Ajax Page Load<br>"
@@ -76,15 +69,10 @@ public class InstructorStudentRecordsAjaxPageAction extends Action {
 
     private void filterFeedbackSessions(String courseId, List<FeedbackSessionAttributes> feedbacks,
                                         InstructorAttributes currentInstructor, StudentAttributes student) {
-        Iterator<FeedbackSessionAttributes> iterFs = feedbacks.iterator();
-        while (iterFs.hasNext()) {
-            FeedbackSessionAttributes tempFs = iterFs.next();
-            if (!tempFs.getCourseId().equals(courseId)
-                    || !currentInstructor.isAllowedForPrivilege(student.section, tempFs.getSessionName(),
-                                              Const.ParamsNames.INSTRUCTOR_PERMISSION_VIEW_SESSION_IN_SECTIONS)) {
-                iterFs.remove();
-            }
-        }
+        feedbacks.removeIf(tempFs -> !tempFs.getCourseId().equals(courseId)
+                    || !currentInstructor.isAllowedForPrivilege(student.section, tempFs.getFeedbackSessionName(),
+                                              Const.ParamsNames.INSTRUCTOR_PERMISSION_VIEW_SESSION_IN_SECTIONS));
+
     }
 
 }

@@ -1,11 +1,8 @@
 package teammates.logic.core;
 
-import java.util.List;
-
 import com.google.appengine.api.blobstore.BlobKey;
 
 import teammates.common.datatransfer.attributes.StudentProfileAttributes;
-import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.storage.api.ProfilesDb;
 
@@ -26,34 +23,42 @@ public final class ProfilesLogic {
         return instance;
     }
 
+    /**
+     * Gets student profile associated with the {@code googleId}.
+     *
+     * @return null if no match found.
+     */
     public StudentProfileAttributes getStudentProfile(String googleId) {
         return profilesDb.getStudentProfile(googleId);
     }
 
-    public void updateStudentProfile(StudentProfileAttributes newStudentProfileAttributes)
-            throws InvalidParametersException, EntityDoesNotExistException {
-        profilesDb.updateStudentProfile(newStudentProfileAttributes);
-    }
-
-    public void deleteStudentProfilePicture(String googleId) throws EntityDoesNotExistException {
-        profilesDb.deleteStudentProfilePicture(googleId);
-    }
-
-    public void deletePicture(BlobKey key) {
-        profilesDb.deletePicture(key);
-    }
-
-    public void updateStudentProfilePicture(String googleId, String newPictureKey) throws EntityDoesNotExistException {
-        profilesDb.updateStudentProfilePicture(googleId, newPictureKey);
+    /**
+     * Updates/Creates the profile using {@link StudentProfileAttributes.UpdateOptions}.
+     *
+     * @return updated student profile
+     * @throws InvalidParametersException if attributes to update are not valid
+     */
+    public StudentProfileAttributes updateOrCreateStudentProfile(StudentProfileAttributes.UpdateOptions updateOptions)
+            throws InvalidParametersException {
+        return profilesDb.updateOrCreateStudentProfile(updateOptions);
     }
 
     /**
-     * Gets all student profiles in the Datastore.
-     * @deprecated Not scalable. Use only for admin features.
+     * Deletes the student profile associated with the {@code googleId}.
+     *
+     * <p>Fails silently if the student profile doesn't exist.</p>
      */
-    @Deprecated
-    public List<StudentProfileAttributes> getAllStudentProfiles() {
-        return profilesDb.getAllStudentProfiles();
+    public void deleteStudentProfile(String googleId) {
+        profilesDb.deleteStudentProfile(googleId);
+    }
+
+    /**
+     * Deletes picture associated with the {@code key}.
+     *
+     * <p>Fails silently if the {@code key} doesn't exist.</p>
+     */
+    public void deletePicture(BlobKey key) {
+        profilesDb.deletePicture(key);
     }
 
 }

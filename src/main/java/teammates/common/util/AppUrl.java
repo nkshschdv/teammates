@@ -42,4 +42,9 @@ public class AppUrl extends Url {
         return withParam(Const.ParamsNames.FEEDBACK_QUESTION_NUMBER, questionNumber);
     }
 
+    @Deprecated
+    public AppUrl withEnableSessionEditDetails(boolean shouldLoadInEditMode) {
+        return withParam(Const.ParamsNames.FEEDBACK_SESSION_ENABLE_EDIT, Boolean.toString(shouldLoadInEditMode));
+    }
+
 }

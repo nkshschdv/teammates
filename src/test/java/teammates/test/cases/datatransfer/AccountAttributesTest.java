@@ -1,23 +1,20 @@
 package teammates.test.cases.datatransfer;
 
-import static teammates.common.util.Const.EOL;
+import java.time.Instant;
 
 import org.testng.annotations.Test;
 
 import teammates.common.datatransfer.attributes.AccountAttributes;
-import teammates.common.datatransfer.attributes.StudentProfileAttributes;
 import teammates.common.util.FieldValidator;
 import teammates.common.util.SanitizationHelper;
 import teammates.common.util.StringHelper;
 import teammates.storage.entity.Account;
-import teammates.storage.entity.StudentProfile;
-import teammates.test.cases.BaseTestCase;
 import teammates.test.driver.StringHelperExtension;
 
 /**
  * SUT: {@link AccountAttributes}.
  */
-public class AccountAttributesTest extends BaseTestCase {
+public class AccountAttributesTest extends BaseAttributesTest {
 
     //TODO: test toString() method
 
@@ -28,32 +25,21 @@ public class AccountAttributesTest extends BaseTestCase {
         AccountAttributes account = createValidAccountAttributesObject();
         assertTrue("all valid values", account.isValid());
 
-        ______TS("null studentProfile");
-
-        account.studentProfile = null;
-        try {
-            account.isValid();
-            signalFailureToDetectException(" - AssertionError");
-        } catch (AssertionError ae) {
-            assertEquals("Non-null value expected for studentProfile", ae.getMessage());
-        }
-
         ______TS("invalid account");
 
         account = createInvalidAccountAttributesObject();
         String expectedError =
-                getPopulatedErrorMessage(
-                    FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE, "",
-                    FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.REASON_EMPTY,
-                    FieldValidator.PERSON_NAME_MAX_LENGTH) + EOL
+                getPopulatedEmptyStringErrorMessage(
+                    FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE_EMPTY_STRING,
+                    FieldValidator.PERSON_NAME_FIELD_NAME, FieldValidator.PERSON_NAME_MAX_LENGTH) + System.lineSeparator()
                 + getPopulatedErrorMessage(
                       FieldValidator.GOOGLE_ID_ERROR_MESSAGE, "invalid google id",
                       FieldValidator.GOOGLE_ID_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
-                      FieldValidator.GOOGLE_ID_MAX_LENGTH) + EOL
+                      FieldValidator.GOOGLE_ID_MAX_LENGTH) + System.lineSeparator()
                 + getPopulatedErrorMessage(
                       FieldValidator.EMAIL_ERROR_MESSAGE, "invalid@email@com",
                       FieldValidator.EMAIL_FIELD_NAME, FieldValidator.REASON_INCORRECT_FORMAT,
-                      FieldValidator.EMAIL_MAX_LENGTH) + EOL
+                      FieldValidator.EMAIL_MAX_LENGTH) + System.lineSeparator()
                 + getPopulatedErrorMessage(
                       FieldValidator.SIZE_CAPPED_NON_EMPTY_STRING_ERROR_MESSAGE,
                       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -70,22 +56,20 @@ public class AccountAttributesTest extends BaseTestCase {
         assertEquals("Account", account.getEntityTypeAsString());
     }
 
+    @Override
     @Test
     public void testToEntity() {
         AccountAttributes account = createValidAccountAttributesObject();
-        Account expectedAccount =
-                new Account(account.googleId, account.name, account.isInstructor, account.email,
-                            account.institute, (StudentProfile) new StudentProfileAttributes().toEntity());
-        Account actualAccount = new AccountAttributes(expectedAccount).toEntity();
+        Account expectedAccount = new Account(account.googleId, account.name,
+                account.isInstructor, account.email, account.institute);
+
+        Account actualAccount = account.toEntity();
 
         assertEquals(expectedAccount.getGoogleId(), actualAccount.getGoogleId());
         assertEquals(expectedAccount.getName(), actualAccount.getName());
         assertEquals(expectedAccount.getEmail(), actualAccount.getEmail());
         assertEquals(expectedAccount.getInstitute(), actualAccount.getInstitute());
         assertEquals(expectedAccount.isInstructor(), actualAccount.isInstructor());
-        String expectedProfile = new StudentProfileAttributes(expectedAccount.getStudentProfile()).toString();
-        String actualProfile = new StudentProfileAttributes(actualAccount.getStudentProfile()).toString();
-        assertEquals(expectedProfile, actualProfile);
     }
 
     @Test
@@ -111,28 +95,143 @@ public class AccountAttributesTest extends BaseTestCase {
         AccountAttributes expectedAccount = createAccountAttributesToSanitize();
         actualAccount.sanitizeForSaving();
 
-        assertEquals(SanitizationHelper.sanitizeForHtml(expectedAccount.googleId), actualAccount.googleId);
-        assertEquals(SanitizationHelper.sanitizeForHtml(expectedAccount.name), actualAccount.name);
-        assertEquals(SanitizationHelper.sanitizeForHtml(expectedAccount.email), actualAccount.email);
-        assertEquals(SanitizationHelper.sanitizeForHtml(expectedAccount.institute), actualAccount.institute);
-        expectedAccount.studentProfile.sanitizeForSaving();
-        assertEquals(expectedAccount.studentProfile.toString(), actualAccount.studentProfile.toString());
+        assertEquals(SanitizationHelper.sanitizeGoogleId(expectedAccount.googleId), actualAccount.googleId);
+        assertEquals(SanitizationHelper.sanitizeName(expectedAccount.name), actualAccount.name);
+        assertEquals(SanitizationHelper.sanitizeEmail(expectedAccount.email), actualAccount.email);
+        assertEquals(SanitizationHelper.sanitizeTitle(expectedAccount.institute), actualAccount.institute);
     }
 
     @Test
-    public void testLegacyAccountEntityToAttributes() {
-        Account a = new Account("test.googleId", "name", true, "email@e.com", "institute");
-        a.setStudentProfile(null);
+    public void testBuilderWithDefaultValues() {
+        AccountAttributes observedAccountAttributes = AccountAttributes.builder().build();
 
-        AccountAttributes attr = new AccountAttributes(a);
+        assertNull(observedAccountAttributes.createdAt);
+        assertNull(observedAccountAttributes.getEmail());
+        assertNull(observedAccountAttributes.getGoogleId());
+        assertNull(observedAccountAttributes.getInstitute());
+        assertFalse(observedAccountAttributes.isInstructor());
+        assertNull(observedAccountAttributes.getName());
+    }
 
-        assertEquals(a.getGoogleId(), attr.googleId);
-        assertEquals(a.getEmail(), attr.email);
-        assertEquals(a.getInstitute(), attr.institute);
-        assertEquals(a.getName(), attr.name);
-        assertEquals(null, a.getStudentProfile());
-        assertEquals(null, attr.studentProfile);
+    @Test
+    public void testBuilderWithPopulatedFieldValues() {
+        String expectedGoogleId = "dummyGoogleId";
+        String expectedEmail = "email@example.com";
+        String expectedName = "dummyName";
+        String expectedInstitute = "dummyInstitute";
+        boolean expectedIsInstructor = true; //since false case is covered in default test
+        Instant expectedCreatedAt = Instant.ofEpochMilli(98765);
 
+        AccountAttributes observedAccountAttributes = AccountAttributes.builder()
+                .withGoogleId(expectedGoogleId)
+                .withEmail(expectedEmail)
+                .withName(expectedName)
+                .withInstitute(expectedInstitute)
+                .withIsInstructor(expectedIsInstructor)
+                .withCreatedAt(expectedCreatedAt)
+                .build();
+
+        assertEquals(expectedGoogleId, observedAccountAttributes.getGoogleId());
+        assertEquals(expectedEmail, observedAccountAttributes.getEmail());
+        assertEquals(expectedCreatedAt, observedAccountAttributes.createdAt);
+        assertEquals(expectedInstitute, observedAccountAttributes.getInstitute());
+        assertEquals(expectedIsInstructor, observedAccountAttributes.isInstructor());
+        assertEquals(expectedName, observedAccountAttributes.getName());
+    }
+
+    @Test
+    public void testBuilderWithUnsanitisedFieldValues() {
+        AccountAttributes observedAccountAttributes = AccountAttributes.builder()
+                .withGoogleId("googleId@gmail.com")
+                .withName("  random  name with   extra spaces    ")
+                .withEmail("         email@example.com ")
+                .withInstitute("    random  institute name      with extra    spaces  ")
+                .build();
+
+        assertEquals("googleId", observedAccountAttributes.getGoogleId());
+        assertEquals("random name with extra spaces", observedAccountAttributes.getName());
+        assertEquals("email@example.com", observedAccountAttributes.getEmail());
+        assertEquals("random institute name with extra spaces", observedAccountAttributes.getInstitute());
+    }
+
+    @Test
+    public void testValueOf() {
+        Account genericAccount = new Account("id", "Joe", true, "joe@example.com", "Teammates Institute");
+
+        AccountAttributes observedAccountAttributes = AccountAttributes.valueOf(genericAccount);
+
+        assertEquals(genericAccount.getGoogleId(), observedAccountAttributes.getGoogleId());
+        assertEquals(genericAccount.getName(), observedAccountAttributes.getName());
+        assertEquals(genericAccount.isInstructor(), observedAccountAttributes.isInstructor());
+        assertEquals(genericAccount.getEmail(), observedAccountAttributes.getEmail());
+        assertEquals(genericAccount.getInstitute(), observedAccountAttributes.getInstitute());
+        assertEquals(genericAccount.getCreatedAt(), observedAccountAttributes.createdAt);
+    }
+
+    @Test
+    public void testGetBackUpIdentifier() {
+        AccountAttributes account = createValidAccountAttributesObject();
+
+        String expectedBackUpIdentifierMessage = "Recently modified account::" + account.googleId;
+        assertEquals(expectedBackUpIdentifierMessage, account.getBackupIdentifier());
+    }
+
+    @Test
+    public void getCopy_typicalData_createsCopyCorrectly() {
+        AccountAttributes account = createValidAccountAttributesObject();
+
+        AccountAttributes copy = account.getCopy();
+
+        assertNotSame(account, copy);
+        assertFalse(account.isInstructor);
+
+        assertEquals(account.googleId, copy.googleId);
+        assertEquals(account.name, copy.name);
+        assertEquals(account.institute, copy.institute);
+        assertEquals(account.email, copy.email);
+    }
+
+    @Test
+    public void getCopy_allFieldsNull_createsCopyCorrectly() {
+        AccountAttributes account = AccountAttributes.builder()
+                .withGoogleId(null)
+                .withName(null)
+                .withEmail(null)
+                .withInstitute(null)
+                .withIsInstructor(false)
+                .build();
+
+        AccountAttributes copy = account.getCopy();
+
+        assertNotSame(account, copy);
+        assertFalse(account.isInstructor);
+
+        assertNull("google id should be null", copy.googleId);
+        assertNull("name should be null", copy.name);
+        assertNull("institute should be null", copy.institute);
+        assertNull("email should be null", copy.email);
+    }
+
+    @Test
+    public void testUpdateOptions_withTypicalUpdateOptions_shouldUpdateAttributeCorrectly() {
+        AccountAttributes.UpdateOptions updateOptions =
+                AccountAttributes.updateOptionsBuilder("testGoogleId")
+                        .withIsInstructor(true)
+                        .build();
+
+        assertEquals("testGoogleId", updateOptions.getGoogleId());
+
+        AccountAttributes accountAttributes = AccountAttributes.builder().withIsInstructor(false).build();
+
+        accountAttributes.update(updateOptions);
+
+        assertTrue(accountAttributes.isInstructor());
+    }
+
+    @Test
+    public void testUpdateOptionsBuilder_withNullInput_shouldFailWithAssertionError() {
+        assertThrows(AssertionError.class, () ->
+                AccountAttributes.updateOptionsBuilder(null));
     }
 
     private AccountAttributes createInvalidAccountAttributesObject() {
@@ -142,9 +241,14 @@ public class AccountAttributesTest extends BaseTestCase {
         boolean isInstructor = false;
         String email = "invalid@email@com";
         String institute = StringHelperExtension.generateStringOfLength(FieldValidator.INSTITUTE_NAME_MAX_LENGTH + 1);
-        StudentProfileAttributes studentProfile = new StudentProfileAttributes();
 
-        return new AccountAttributes(googleId, name, isInstructor, email, institute, studentProfile);
+        return AccountAttributes.builder()
+                .withGoogleId(googleId)
+                .withName(name)
+                .withEmail(email)
+                .withInstitute(institute)
+                .withIsInstructor(isInstructor)
+                .build();
     }
 
     private AccountAttributes createValidAccountAttributesObject() {
@@ -155,32 +259,24 @@ public class AccountAttributesTest extends BaseTestCase {
         String email = "valid@email.com";
         String institute = "valid institute name";
 
-        return new AccountAttributes(googleId, name, isInstructor, email, institute);
+        return AccountAttributes.builder()
+                .withGoogleId(googleId)
+                .withName(name)
+                .withEmail(email)
+                .withInstitute(institute)
+                .withIsInstructor(isInstructor)
+                .build();
     }
 
     private AccountAttributes createAccountAttributesToSanitize() {
+        AccountAttributes unsanitizedAttributes = AccountAttributes.builder().build();
+        unsanitizedAttributes.googleId = "    google'Id@gmail.com\t";
+        unsanitizedAttributes.name = "'n    \t\t    a me'\n\n";
+        unsanitizedAttributes.institute = "Some\t  \\       institute   \n/";
+        unsanitizedAttributes.email = "   <my&email>@gmail.com\n";
+        unsanitizedAttributes.isInstructor = true;
 
-        AccountAttributes account = new AccountAttributes();
-
-        account.googleId = "googleId@gmail.com";
-        account.name = "'name'";
-        account.institute = "\\/";
-        account.email = "&<email>&";
-        account.isInstructor = true;
-
-        String shortName = "<name>";
-        String personalEmail = "'toSanitize@email.com'";
-        String profileInstitute = "";
-        String nationality = "&\"invalid nationality &";
-        String gender = "'\"'other";
-        String moreInfo = "<<script> alert('hi!'); </script>";
-        String pictureKey = "";
-
-        account.studentProfile = new StudentProfileAttributes(account.googleId, shortName, personalEmail,
-                profileInstitute, nationality, gender, moreInfo, pictureKey);
-
-        return account;
-
+        return unsanitizedAttributes;
     }
 
 }

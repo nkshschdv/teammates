@@ -3,12 +3,7 @@ package teammates.common.exception;
 @SuppressWarnings("serial")
 public class FeedbackSessionNotVisibleException extends UnauthorizedAccessException {
 
-    private String startTimeString;
-
-    public FeedbackSessionNotVisibleException(String openingDateString) {
-        super();
-        this.startTimeString = openingDateString;
-    }
+    private final String startTimeString;
 
     public FeedbackSessionNotVisibleException(String message, String openingDateString) {
         super(message);

@@ -192,7 +192,8 @@
       "course": "IFSubmitUiT.CS2104",
       "name": "Alice Betsy</option></td></div>'\"",
       "comments": "This student's name is Alice Betsy</option></td></div>'\"",
-      "team": "Team 1</td></div>'\""
+      "team": "Team 1</td></div>'\"",
+      "section": "None"
     },
     "Benny": {
       "googleId": "IFSubmitUiT.benny.c",
@@ -200,7 +201,8 @@
       "course": "IFSubmitUiT.CS2104",
       "name": "Benny Charles",
       "comments": "This student's name is Benny Charles",
-      "team": "Team 1</td></div>'\""
+      "team": "Team 1</td></div>'\"",
+      "section": "None"
     },
     "ExtraGuy": {
       "googleId": "extra.guy",
@@ -253,17 +255,14 @@
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
       "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Instructions for first session"
-      },
-      "createdTime": "2012-04-01 11:59 PM UTC",
-      "startTime": "2012-04-01 11:59 PM UTC",
-      "endTime": "2026-04-30 11:59 PM UTC",
-      "sessionVisibleFromTime": "2012-04-01 11:59 PM UTC",
-      "resultsVisibleFromTime": "2026-05-01 11:59 PM UTC",
-      "timeZone": 8.0,
+      "instructions": "Instructions for first session",
+      "createdTime": "2012-04-01T23:59:00Z",
+      "startTime": "2012-04-01T15:59:00Z",
+      "endTime": "2026-04-30T15:59:00Z",
+      "sessionVisibleFromTime": "2012-04-01T15:59:00Z",
+      "resultsVisibleFromTime": "2026-05-01T15:59:00Z",
+      "timeZone": "Asia/Singapore",
       "gracePeriod": 10,
-      "feedbackSessionType": "STANDARD",
       "sentOpenEmail": true,
       "sentClosingEmail": false,
       "sentClosedEmail": false,
@@ -276,17 +275,14 @@
       "feedbackSessionName": "Grace Period Session",
       "courseId": "IFSubmitUiT.CS2104",
       "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Please please fill in the following questions."
-      },
-      "createdTime": "2012-04-01 11:59 PM UTC",
-      "startTime": "2012-04-01 11:59 PM UTC",
-      "endTime": "2012-04-02 11:59 PM UTC",
-      "sessionVisibleFromTime": "2012-04-01 11:59 PM UTC",
-      "resultsVisibleFromTime": "2026-05-01 11:59 PM UTC",
-      "timeZone": 8.0,
+      "instructions": "Please please fill in the following questions.",
+      "createdTime": "2012-04-01T23:59:00Z",
+      "startTime": "2012-04-01T15:59:00Z",
+      "endTime": "2012-04-02T15:59:00Z",
+      "sessionVisibleFromTime": "2012-04-01T15:59:00Z",
+      "resultsVisibleFromTime": "2026-05-01T15:59:00Z",
+      "timeZone": "Asia/Singapore",
       "gracePeriod": 1440000,
-      "feedbackSessionType": "STANDARD",
       "sentOpenEmail": true,
       "sentClosingEmail": false,
       "sentClosedEmail": false,
@@ -299,17 +295,14 @@
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
       "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Please please fill in the second feedback session"
-      },
-      "createdTime": "2012-04-01 11:59 PM UTC",
-      "startTime": "2012-04-02 11:59 PM UTC",
-      "endTime": "2012-04-30 11:59 PM UTC",
-      "sessionVisibleFromTime": "2012-04-01 11:59 PM UTC",
-      "resultsVisibleFromTime": "2026-05-01 11:59 PM UTC",
-      "timeZone": 8.0,
+      "instructions": "Please please fill in the second feedback session",
+      "createdTime": "2012-04-01T23:59:00Z",
+      "startTime": "2012-04-02T15:59:00Z",
+      "endTime": "2012-04-30T15:59:00Z",
+      "sessionVisibleFromTime": "2012-04-01T15:59:00Z",
+      "resultsVisibleFromTime": "2026-05-01T15:59:00Z",
+      "timeZone": "Asia/Singapore",
       "gracePeriod": 20,
-      "feedbackSessionType": "STANDARD",
       "sentOpenEmail": false,
       "sentClosingEmail": false,
       "sentClosedEmail": false,
@@ -322,17 +315,14 @@
       "feedbackSessionName": "Third Session",
       "courseId": "IFSubmitUiT.CS2104",
       "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Please please fill in the last feedback session"
-      },
-      "createdTime": "2012-04-01 11:59 PM UTC",
-      "startTime": "2012-04-02 11:59 PM UTC",
-      "endTime": "2026-04-30 11:59 PM UTC",
-      "sessionVisibleFromTime": "2012-04-01 11:59 PM UTC",
-      "resultsVisibleFromTime": "2012-05-01 11:59 PM UTC",
-      "timeZone": 8.0,
+      "instructions": "Please please fill in the last feedback session",
+      "createdTime": "2012-04-01T23:59:00Z",
+      "startTime": "2012-04-02T15:59:00Z",
+      "endTime": "2026-04-30T15:59:00Z",
+      "sessionVisibleFromTime": "2012-04-01T15:59:00Z",
+      "resultsVisibleFromTime": "2012-05-01T15:59:00Z",
+      "timeZone": "Asia/Singapore",
       "gracePeriod": 20,
-      "feedbackSessionType": "STANDARD",
       "sentOpenEmail": true,
       "sentClosingEmail": false,
       "sentClosedEmail": false,
@@ -341,43 +331,18 @@
       "isClosingEmailEnabled": true,
       "isPublishedEmailEnabled": true
     },
-    "Private Session": {
-      "feedbackSessionName": "Private Session",
-      "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Please please fill in the following questions."
-      },
-      "createdTime": "2012-03-20 11:59 PM UTC",
-      "startTime": "2012-04-01 11:59 PM UTC",
-      "sessionVisibleFromTime": "1970-11-27 12:00 AM UTC",
-      "resultsVisibleFromTime": "1970-11-27 12:00 AM UTC",
-      "timeZone": 8.0,
-      "gracePeriod": 0,
-      "feedbackSessionType": "PRIVATE",
-      "sentOpenEmail": true,
-      "sentClosingEmail": false,
-      "sentClosedEmail": false,
-      "sentPublishedEmail": false,
-      "isOpeningEmailEnabled": true,
-      "isClosingEmailEnabled": true,
-      "isPublishedEmailEnabled": true
-    },
     "Awaiting Session": {
       "feedbackSessionName": "Fourth Session",
       "courseId": "IFSubmitUiT.CS2104",
       "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "instructions": {
-        "value": "Please please fill in the second feedback session"
-      },
-      "createdTime": "2012-04-01 11:59 PM UTC",
-      "startTime": "2035-04-02 11:59 PM UTC",
-      "endTime": "2035-04-30 11:59 PM UTC",
-      "sessionVisibleFromTime": "2012-04-01 11:59 PM UTC",
-      "resultsVisibleFromTime": "2026-05-01 11:59 PM UTC",
-      "timeZone": 8.0,
+      "instructions": "Please please fill in the second feedback session",
+      "createdTime": "2012-04-01T23:59:00Z",
+      "startTime": "2035-04-02T15:59:00Z",
+      "endTime": "2035-04-30T15:59:00Z",
+      "sessionVisibleFromTime": "2012-04-01T15:59:00Z",
+      "resultsVisibleFromTime": "2026-05-01T15:59:00Z",
+      "timeZone": "Asia/Singapore",
       "gracePeriod": 20,
-      "feedbackSessionType": "STANDARD",
       "sentOpenEmail": false,
       "sentClosingEmail": false,
       "sentClosedEmail": false,
@@ -391,10 +356,7 @@
     "qn1InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "What is the best selling point of your product?"
-      },
+      "questionMetaData": "What is the best selling point of your product?",
       "questionNumber": 1,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -414,10 +376,7 @@
     "qn2InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Rate 3 students' products"
-      },
+      "questionMetaData": "Rate 3 students' products",
       "questionNumber": 2,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -438,10 +397,7 @@
     "qn3InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Comments about the class"
-      },
+      "questionMetaData": "Comments about the class",
       "questionNumber": 3,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -458,10 +414,7 @@
     "qn4InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "This question should be hidden."
-      },
+      "questionMetaData": "This question should be hidden.",
       "questionNumber": 4,
       "questionType": "TEXT",
       "giverType": "TEAMS",
@@ -480,10 +433,7 @@
     "qn5InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "This question should be hidden."
-      },
+      "questionMetaData": "This question should be hidden.",
       "questionNumber": 5,
       "questionType": "TEXT",
       "giverType": "STUDENTS",
@@ -502,10 +452,7 @@
     "qn6InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Give feedback to other instructors."
-      },
+      "questionMetaData": "Give feedback to other instructors.",
       "questionNumber": 6,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -524,10 +471,7 @@
     "qn7InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"UI\",\"Algo\"],\"questionText\":\"What is the best selling point of your product?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"UI\",\"Algo\"],\"questionText\":\"What is the best selling point of your product?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}",
       "questionNumber": 7,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -547,10 +491,7 @@
     "qn8InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"UI\",\"Algo\"],\"questionText\":\"What do you think is the other instructors' best feature?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"UI\",\"Algo\"],\"questionText\":\"What do you think is the other instructors' best feature?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}",
       "questionNumber": 8,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -569,10 +510,7 @@
     "qn9InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[\"UI\",\"Algo\",\"Design\"],\"questionText\":\"What is the best selling point of your product?\",\"questionType\":\"MSQ\",\"numOfMsqChoices\":3,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[\"UI\",\"Algo\",\"Design\"],\"questionText\":\"What is the best selling point of your product?\",\"questionType\":\"MSQ\",\"otherEnabled\":false}",
       "questionNumber": 9,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -592,10 +530,7 @@
     "qn10InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[\"UI\",\"Algo\",\"Design\"],\"questionText\":\"What do you think is the other instructors' best feature?\",\"questionType\":\"MSQ\",\"numOfMsqChoices\":3,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[\"UI\",\"Algo\",\"Design\"],\"questionText\":\"What do you think is the other instructors' best feature?\",\"questionType\":\"MSQ\",\"otherEnabled\":false}",
       "questionNumber": 10,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -614,10 +549,7 @@
     "qn11InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Who is the best student?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"STUDENTS\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Who is the best student?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"STUDENTS\",\"otherEnabled\":false}",
       "questionNumber": 11,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -637,10 +569,7 @@
     "qn12InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[],\"questionText\":\"Who are the best students?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"STUDENTS\",\"numOfMsqChoices\":0,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[],\"questionText\":\"Who are the best students?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"STUDENTS\",\"otherEnabled\":false}",
       "questionNumber": 12,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -660,10 +589,7 @@
     "qn13InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Which is the best team?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"TEAMS\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Which is the best team?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"TEAMS\",\"otherEnabled\":false}",
       "questionNumber": 13,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -683,10 +609,7 @@
     "qn14InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[],\"questionText\":\"Who are the best teams?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"TEAMS\",\"numOfMsqChoices\":0,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[],\"questionText\":\"Who are the best teams?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"TEAMS\",\"otherEnabled\":false}",
       "questionNumber": 14,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -706,10 +629,7 @@
     "qn15InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"minScale\":1,\"questionText\":\"Rate your product\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}"
-      },
+      "questionMetaData": "{\"minScale\":1,\"questionText\":\"Rate your product\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}",
       "questionNumber": 15,
       "questionType": "NUMSCALE",
       "giverType": "INSTRUCTORS",
@@ -729,10 +649,7 @@
     "qn16InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"minScale\":1,\"questionText\":\"Rate others' product\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}"
-      },
+      "questionMetaData": "{\"minScale\":1,\"questionText\":\"Rate others' product\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}",
       "questionNumber": 16,
       "questionType": "NUMSCALE",
       "giverType": "INSTRUCTORS",
@@ -751,10 +668,7 @@
     "qn17InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Who is the best instructor?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"INSTRUCTORS\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":0,\"mcqChoices\":[],\"questionText\":\"Who is the best instructor?\",\"questionType\":\"MCQ\",\"generateOptionsFor\":\"INSTRUCTORS\",\"otherEnabled\":false}",
       "questionNumber": 17,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -774,10 +688,7 @@
     "qn18InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[],\"questionText\":\"Who do you recommend as tutors?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"INSTRUCTORS\",\"numOfMsqChoices\":0,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[],\"questionText\":\"Who do you recommend as tutors?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"INSTRUCTORS\",\"otherEnabled\":false}",
       "questionNumber": 18,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -797,12 +708,9 @@
     "qn19InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":false,\"pointsPerOption\":false,\"questionText\":\"How important are the following factors to you? Give points accordingly.\",\"numOfConstSumOptions\":2,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Grades\",\"Fun\"]}"
-      },
+      "questionMetaData": "{\"msqChoices\":[],\"questionText\":\"Which teams would you like to be an instructor of again?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"TEAMS\",\"numOfMsqChoices\":0,\"otherEnabled\":false}",
       "questionNumber": 19,
-      "questionType": "CONSTSUM",
+      "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
       "recipientType": "SELF",
       "numberOfEntitiesToGiveFeedbackTo": 1,
@@ -820,10 +728,7 @@
     "qn20InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":true,\"pointsPerOption\":true,\"questionText\":\"Split points among the teams\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":true,\"forceUnevenDistribution\":false,\"distributePointsFor\":\"None\",\"pointsPerOption\":true,\"questionText\":\"Split points among the teams\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}",
       "questionNumber": 20,
       "questionType": "CONSTSUM",
       "giverType": "INSTRUCTORS",
@@ -843,11 +748,28 @@
     "qn21InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"questionText\":\"Rate the contribution of your team members and yourself.\"}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":false,\"forceUnevenDistribution\":false,\"distributePointsFor\":\"None\",\"pointsPerOption\":false,\"questionText\":\"How important are the following factors to you? Give points accordingly.\",\"numOfConstSumOptions\":2,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Grades\",\"Fun\"]}",
       "questionNumber": 21,
+      "questionType": "CONSTSUM",
+      "giverType": "INSTRUCTORS",
+      "recipientType": "SELF",
+      "numberOfEntitiesToGiveFeedbackTo": 1,
+      "showResponsesTo": [
+        "RECEIVER",
+        "INSTRUCTORS"
+      ],
+      "showGiverNameTo": [
+        "INSTRUCTORS"
+      ],
+      "showRecipientNameTo": [
+        "INSTRUCTORS"
+      ]
+    },
+    "qn22InSession1": {
+      "feedbackSessionName": "First Session",
+      "courseId": "IFSubmitUiT.CS2104",
+      "questionMetaData": "{\"questionText\":\"Rate the contribution of your team members and yourself.\"}",
+      "questionNumber": 22,
       "questionType": "CONTRIB",
       "giverType": "STUDENTS",
       "recipientType": "OWN_TEAM_MEMBERS_INCLUDING_SELF",
@@ -862,36 +784,10 @@
         "INSTRUCTORS"
       ]
     },
-    "qn22InSession1": {
-      "feedbackSessionName": "First Session",
-      "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":true,\"forceUnevenDistribution\":true,\"pointsPerOption\":true,\"questionText\":\"Split points among the teams, based on how much effort you think the teams have put into the project\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}"
-      },
-      "questionNumber": 22,
-      "questionType": "CONSTSUM",
-      "giverType": "INSTRUCTORS",
-      "recipientType": "TEAMS",
-      "numberOfEntitiesToGiveFeedbackTo": -100,
-      "showResponsesTo": [
-        "RECEIVER",
-        "INSTRUCTORS"
-      ],
-      "showGiverNameTo": [
-        "INSTRUCTORS"
-      ],
-      "showRecipientNameTo": [
-        "INSTRUCTORS"
-      ]
-    },
     "qn23InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":false,\"forceUnevenDistribution\":true,\"pointsPerOption\":false,\"questionText\":\"How much more time should the teams spend on the following, regarding their product? Give points accordingly.\",\"numOfConstSumOptions\":3,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Design\",\"Usability\",\"Algo\"]}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":true,\"forceUnevenDistribution\":true,\"distributePointsFor\":\"All options\",\"pointsPerOption\":true,\"questionText\":\"Split points among the teams, based on how much effort you think the teams have put into the project\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}",
       "questionNumber": 23,
       "questionType": "CONSTSUM",
       "giverType": "INSTRUCTORS",
@@ -911,15 +807,52 @@
     "qn24InSession1": {
       "feedbackSessionName": "First Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[],\"questionText\":\"Which teams would you like to be an instructor of again?\",\"questionType\":\"MSQ\",\"generateOptionsFor\":\"TEAMS\",\"numOfMsqChoices\":0,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":false,\"forceUnevenDistribution\":true,\"distributePointsFor\":\"All options\",\"pointsPerOption\":false,\"questionText\":\"How much more time should the teams spend on the following, regarding their product? Give points accordingly.\",\"numOfConstSumOptions\":3,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Design\",\"Usability\",\"Algo\"]}",
       "questionNumber": 24,
-      "questionType": "MSQ",
+      "questionType": "CONSTSUM",
       "giverType": "INSTRUCTORS",
-      "recipientType": "SELF",
-      "numberOfEntitiesToGiveFeedbackTo": 1,
+      "recipientType": "TEAMS",
+      "numberOfEntitiesToGiveFeedbackTo": -100,
+      "showResponsesTo": [
+        "RECEIVER",
+        "INSTRUCTORS"
+      ],
+      "showGiverNameTo": [
+        "INSTRUCTORS"
+      ],
+      "showRecipientNameTo": [
+        "INSTRUCTORS"
+      ]
+    },
+    "qn25InSession1": {
+      "feedbackSessionName": "First Session",
+      "courseId": "IFSubmitUiT.CS2104",
+      "questionMetaData": "{\"distributeToRecipients\":true,\"forceUnevenDistribution\":true,\"distributePointsFor\":\"At least some options\",\"pointsPerOption\":true,\"questionText\":\"Split points among the teams, based on how much effort you think the teams have put into the project\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}",
+      "questionNumber": 25,
+      "questionType": "CONSTSUM",
+      "giverType": "INSTRUCTORS",
+      "recipientType": "TEAMS",
+      "numberOfEntitiesToGiveFeedbackTo": -100,
+      "showResponsesTo": [
+        "RECEIVER",
+        "INSTRUCTORS"
+      ],
+      "showGiverNameTo": [
+        "INSTRUCTORS"
+      ],
+      "showRecipientNameTo": [
+        "INSTRUCTORS"
+      ]
+    },
+    "qn26InSession1": {
+      "feedbackSessionName": "First Session",
+      "courseId": "IFSubmitUiT.CS2104",
+      "questionMetaData": "{\"distributeToRecipients\":false,\"forceUnevenDistribution\":true,\"distributePointsFor\":\"At least some options\",\"pointsPerOption\":false,\"questionText\":\"How much more time should the teams spend on the following, regarding their product? Give points accordingly.\",\"numOfConstSumOptions\":3,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Design\",\"Usability\",\"Algo\"]}",
+      "questionNumber": 26,
+      "questionType": "CONSTSUM",
+      "giverType": "INSTRUCTORS",
+      "recipientType": "TEAMS",
+      "numberOfEntitiesToGiveFeedbackTo": -100,
       "showResponsesTo": [
         "RECEIVER",
         "INSTRUCTORS"
@@ -934,10 +867,7 @@
     "qn1InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Give feedback to your instructors"
-      },
+      "questionMetaData": "Give feedback to your instructors",
       "questionNumber": 1,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -956,10 +886,7 @@
     "qn2InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"It's good\",\"It's perfect\"],\"questionText\":\"What do you like best about our product?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"numOfMcqChoices\":2,\"mcqChoices\":[\"It's good\",\"It's perfect\"],\"questionText\":\"What do you like best about our product?\",\"questionType\":\"MCQ\",\"otherEnabled\":false}",
       "questionNumber": 2,
       "questionType": "MCQ",
       "giverType": "INSTRUCTORS",
@@ -978,10 +905,7 @@
     "qn3InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"msqChoices\":[\"It's good\",\"It's perfect\"],\"questionText\":\"What do you like best about our product?\",\"questionType\":\"MSQ\",\"numOfMsqChoices\":2,\"otherEnabled\":false}"
-      },
+      "questionMetaData": "{\"msqChoices\":[\"It's good\",\"It's perfect\"],\"questionText\":\"What do you like best about our product?\",\"questionType\":\"MSQ\",\"otherEnabled\":false}",
       "questionNumber": 3,
       "questionType": "MSQ",
       "giverType": "INSTRUCTORS",
@@ -1000,10 +924,7 @@
     "qn4InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"minScale\":1,\"questionText\":\"Rate our product.\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}"
-      },
+      "questionMetaData": "{\"minScale\":1,\"questionText\":\"Rate our product.\",\"questionType\":\"NUMSCALE\",\"maxScale\":5,\"step\":0.5}",
       "questionNumber": 4,
       "questionType": "NUMSCALE",
       "giverType": "INSTRUCTORS",
@@ -1022,10 +943,7 @@
     "qn5InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":false,\"pointsPerOption\":false,\"questionText\":\"How important are the following factors to you? Give points accordingly.\",\"numOfConstSumOptions\":2,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Grades\",\"Fun\"]}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":false,\"forceUnevenDistribution\":false,\"distributePointsFor\":\"None\",\"pointsPerOption\":false,\"questionText\":\"How important are the following factors to you? Give points accordingly.\",\"numOfConstSumOptions\":2,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[\"Grades\",\"Fun\"]}",
       "questionNumber": 5,
       "questionType": "CONSTSUM",
       "giverType": "INSTRUCTORS",
@@ -1045,10 +963,7 @@
     "qn6InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"distributeToRecipients\":true,\"pointsPerOption\":true,\"questionText\":\"Split points among the teams\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}"
-      },
+      "questionMetaData": "{\"distributeToRecipients\":true,\"forceUnevenDistribution\":false,\"distributePointsFor\":\"None\",\"pointsPerOption\":true,\"questionText\":\"Split points among the teams\",\"numOfConstSumOptions\":0,\"questionType\":\"CONSTSUM\",\"points\":100,\"constSumOptions\":[]}",
       "questionNumber": 6,
       "questionType": "CONSTSUM",
       "giverType": "INSTRUCTORS",
@@ -1068,10 +983,7 @@
     "qn7InSession2": {
       "feedbackSessionName": "Second Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "{\"questionText\":\"Rate the contribution of your team members and yourself.(Closed session)\"}"
-      },
+      "questionMetaData": "{\"questionText\":\"Rate the contribution of your team members and yourself.(Closed session)\"}",
       "questionNumber": 7,
       "questionType": "CONTRIB",
       "giverType": "STUDENTS",
@@ -1087,35 +999,10 @@
         "INSTRUCTORS"
       ]
     },
-    "qn1InSession4": {
-      "feedbackSessionName": "Private Session",
-      "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Give feedback to your instructors"
-      },
-      "questionNumber": 1,
-      "questionType": "TEXT",
-      "giverType": "SELF",
-      "recipientType": "SELF",
-      "numberOfEntitiesToGiveFeedbackTo": -100,
-      "showResponsesTo": [
-        "RECEIVER"
-      ],
-      "showGiverNameTo": [
-        "RECEIVER"
-      ],
-      "showRecipientNameTo": [
-        "RECEIVER"
-      ]
-    },
     "qn1InSession5": {
       "feedbackSessionName": "Fourth Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Give feedback to your instructors"
-      },
+      "questionMetaData": "Give feedback to your instructors",
       "questionNumber": 1,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",
@@ -1134,10 +1021,7 @@
     "graceperiod.session.feedback": {
       "feedbackSessionName": "Grace Period Session",
       "courseId": "IFSubmitUiT.CS2104",
-      "creatorEmail": "IFSubmitUiT.instr@gmail.tmt",
-      "questionMetaData": {
-        "value": "Give feedback to yourself."
-      },
+      "questionMetaData": "Give feedback to yourself.",
       "questionNumber": 1,
       "questionType": "TEXT",
       "giverType": "INSTRUCTORS",

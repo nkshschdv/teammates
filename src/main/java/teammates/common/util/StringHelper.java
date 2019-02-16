@@ -2,17 +2,23 @@ package teammates.common.util;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.google.common.base.CharMatcher;
+
 import teammates.common.exception.InvalidParametersException;
+import teammates.common.exception.TeammatesException;
 
 /**
  * Holds String-related helper functions.
@@ -25,13 +31,17 @@ public final class StringHelper {
         // utility class
     }
 
+    /**
+     * Checks whether the input string is empty or equals {@code null}.
+     * @param s The string to be checked
+     */
+    public static boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
+
     public static String generateStringOfLength(int length, char character) {
         Assumption.assertTrue(length >= 0);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            sb.append(character);
-        }
-        return sb.toString();
+        return String.join("", Collections.nCopies(length, String.valueOf(character)));
     }
 
     public static boolean isWhiteSpace(String string) {
@@ -55,12 +65,8 @@ public final class StringHelper {
      * @param regexList The regex list used for the matching
      */
     public static boolean isAnyMatching(String input, List<String> regexList) {
-        for (String regex : regexList) {
-            if (isMatching(input.trim().toLowerCase(), regex)) {
-                return true;
-            }
-        }
-        return false;
+        return regexList.stream()
+                .anyMatch(r -> isMatching(input.trim().toLowerCase(), r));
     }
 
     public static String getIndent(int length) {
@@ -77,11 +83,8 @@ public final class StringHelper {
         if (inputString.length() <= truncateLength) {
             return inputString;
         }
-        String result = inputString;
-        if (inputString.length() > truncateLength) {
-            result = inputString.substring(0, truncateLength - 3) + "...";
-        }
-        return result;
+
+        return inputString.substring(0, truncateLength - 3) + "...";
     }
 
     /**
@@ -90,8 +93,8 @@ public final class StringHelper {
      * @param maximumStringLength - maximum required length of the string
      * @return String with at most maximumStringLength length
      */
-    public static String truncateHead(String inputString, final int maximumStringLength) {
-        final int inputStringLength = inputString.length();
+    public static String truncateHead(String inputString, int maximumStringLength) {
+        int inputStringLength = inputString.length();
         if (inputStringLength <= maximumStringLength) {
             return inputString;
         }
@@ -127,7 +130,8 @@ public final class StringHelper {
             byte[] encrypted = cipher.doFinal(value.getBytes());
             return byteArrayToHexString(encrypted);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            Assumption.fail(TeammatesException.toStringWithStackTrace(e));
+            return null;
         }
     }
 
@@ -150,7 +154,8 @@ public final class StringHelper {
             log.warning("Attempted to decrypt invalid ciphertext: " + message);
             throw new InvalidParametersException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            Assumption.fail(TeammatesException.toStringWithStackTrace(e));
+            return null;
         }
     }
 
@@ -160,7 +165,7 @@ public final class StringHelper {
      * @return Concatenated string.
      */
     public static <T> String toString(List<T> list) {
-        return toString(list, Const.EOL);
+        return toString(list, System.lineSeparator());
     }
 
     /**
@@ -169,18 +174,9 @@ public final class StringHelper {
      * @return Concatenated string.
      */
     public static <T> String toString(List<T> list, String delimiter) {
-        if (list.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder returnValue = new StringBuilder();
-        for (int i = 0; i < list.size() - 1; i++) {
-            returnValue.append(list.get(i)).append(delimiter);
-        }
-        //append the last item
-        returnValue.append(list.get(list.size() - 1));
-
-        return returnValue.toString();
+        return list.stream()
+                .map(s -> s.toString())
+                .collect(Collectors.joining(delimiter));
     }
 
     public static String toDecimalFormatString(double doubleVal) {
@@ -188,6 +184,7 @@ public final class StringHelper {
         return df.format(doubleVal);
     }
 
+    @Deprecated
     public static String toUtcFormat(double hourOffsetTimeZone) {
         String utcFormatTimeZone = "UTC";
         if (hourOffsetTimeZone == 0) {
@@ -202,29 +199,6 @@ public final class StringHelper {
                                     " %+03d:%02d",
                                     (int) hourOffsetTimeZone,
                                     (int) (Math.abs(hourOffsetTimeZone - (int) hourOffsetTimeZone) * 300 / 5));
-    }
-
-    //From: http://stackoverflow.com/questions/5864159/count-words-in-a-string-method
-    public static int countWords(String s) {
-        int wordCount = 0;
-        boolean isWord = false;
-        int endOfLine = s.length() - 1;
-        for (int i = 0; i < s.length(); i++) {
-            // if the char is a letter, word = true.
-            if (Character.isLetter(s.charAt(i)) && i != endOfLine) {
-                isWord = true;
-                // if char isn't a letter and there have been letters before,
-                // counter goes up.
-            } else if (!Character.isLetter(s.charAt(i)) && isWord) {
-                wordCount++;
-                isWord = false;
-                // last word of String; if it doesn't end with a non letter, it
-                // wouldn't count without this.
-            } else if (Character.isLetter(s.charAt(i)) && i == endOfLine) {
-                wordCount++;
-            }
-        }
-        return wordCount;
     }
 
     /**
@@ -294,21 +268,7 @@ public final class StringHelper {
         if (str == null) {
             return null;
         }
-        return str.trim().replaceAll("\\s+", " ");
-    }
-
-    /**
-     * Trims all strings in the set and reduces consecutive white spaces to only one space.
-     */
-    public static Set<String> removeExtraSpace(Set<String> strSet) {
-        if (strSet == null) {
-            return null;
-        }
-        Set<String> result = new TreeSet<String>();
-        for (String s : strSet) {
-            result.add(removeExtraSpace(s));
-        }
-        return result;
+        return CharMatcher.whitespace().trimFrom(str).replaceAll("\\s+", " ");
     }
 
     /**
@@ -327,11 +287,9 @@ public final class StringHelper {
 
         char[] charArray = str.toCharArray();
 
-        for (int i = 0; i < charArray.length; i++) {
-            if (!isMatching(Character.toString(charArray[i]), regex)) {
-                charArray[i] = replacement;
-            }
-        }
+        IntStream.range(0, charArray.length)
+                .filter(i -> !isMatching(Character.toString(charArray[i]), regex))
+                .forEach(i -> charArray[i] = replacement);
 
         return String.valueOf(charArray);
     }
@@ -350,11 +308,8 @@ public final class StringHelper {
 
     public static byte[] hexStringToByteArray(String s) {
         byte[] b = new byte[s.length() / 2];
-        for (int i = 0; i < b.length; i++) {
-            int index = i * 2;
-            int v = Integer.parseInt(s.substring(index, index + 2), 16);
-            b[i] = (byte) v;
-        }
+        IntStream.range(0, b.length)
+                .forEach(i -> b[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16));
         return b;
     }
 
@@ -363,7 +318,7 @@ public final class StringHelper {
      * @return html table string
      */
     public static String csvToHtmlTable(String str) {
-        String[] lines = handleNewLine(str).split(Const.EOL);
+        String[] lines = handleNewLine(str).split(System.lineSeparator());
 
         StringBuilder result = new StringBuilder();
 
@@ -409,7 +364,7 @@ public final class StringHelper {
     }
 
     private static List<String> getTableData(String str) {
-        List<String> data = new ArrayList<String>();
+        List<String> data = new ArrayList<>();
 
         boolean inquote = false;
         StringBuilder buffer = new StringBuilder();
@@ -444,14 +399,8 @@ public final class StringHelper {
     }
 
     private static boolean checkIfEmptyRow(List<String> rowData) {
-
-        for (String td : rowData) {
-            if (!td.isEmpty()) {
-                return false;
-            }
-        }
-
-        return true;
+        return rowData.stream()
+                .allMatch(r -> r.isEmpty());
     }
 
     /**
@@ -496,13 +445,9 @@ public final class StringHelper {
      * @return number of empty strings passed
      */
     public static int countEmptyStrings(String... strings) {
-        int numOfEmptyStrings = 0;
-        for (String s : strings) {
-            if (s == null || s.isEmpty()) {
-                numOfEmptyStrings += 1;
-            }
-        }
-        return numOfEmptyStrings;
+        return Math.toIntExact(Arrays.stream(strings)
+                .filter(s -> isEmpty(s))
+                .count());
     }
 
     /**
@@ -528,11 +473,9 @@ public final class StringHelper {
             return null;
         }
 
-        if (!str.startsWith("[") || !str.endsWith("]")) {
-            return str;
-        }
-
-        return str.substring(1, str.length() - 1);
+        Pattern p = Pattern.compile("^\\[(.*)]$");
+        Matcher m = p.matcher(str);
+        return m.find() ? m.group(1) : str;
     }
 
     /**
@@ -540,12 +483,18 @@ public final class StringHelper {
      * trailing any string in the input array.
      */
     public static String[] trim(String[] stringsToTrim) {
-        String[] stringsAfterTrim = new String[stringsToTrim.length];
-        int i = 0;
-        for (String stringToTrim : stringsToTrim) {
-            stringsAfterTrim[i++] = stringToTrim.trim();
-        }
-        return stringsAfterTrim;
+        return Arrays.stream(stringsToTrim)
+                .map(s -> s.trim())
+                .toArray(size -> new String[size]);
+    }
+
+    /**
+     * Returns a String array after converting them to lower case.
+     */
+    public static String[] toLowerCase(String[] stringsToConvertToLowerCase) {
+        return Arrays.stream(stringsToConvertToLowerCase)
+                .map(s -> s.toLowerCase())
+                .toArray(size -> new String[size]);
     }
 
     /**
@@ -559,15 +508,21 @@ public final class StringHelper {
      * Returns a new String composed of copies of the String elements joined together
      * with a copy of the specified delimiter.
      */
-    public static String join(String delimiter, String... elements) {
-        StringBuffer result = new StringBuffer();
-        for (String element : elements) {
-            result.append(element).append(delimiter);
+    public static String join(String delimiter, List<Integer> elements) {
+        return String.join(delimiter, toStringArray(elements));
+    }
+
+    /**
+     * Converts list of integer to array of strings.
+     */
+    private static String[] toStringArray(List<Integer> elements) {
+        if (elements == null) {
+            throw new IllegalArgumentException("Provided arguments cannot be null");
         }
-        if (result.length() > 0 && delimiter.length() > 0) {
-            result.delete(result.length() - delimiter.length(), result.length());
-        }
-        return result.toString();
+
+        return elements.stream()
+                .map(s -> String.valueOf(s))
+                .toArray(size -> new String[size]);
     }
 
     /**
@@ -583,11 +538,24 @@ public final class StringHelper {
             return true;
         }
 
-        for (String string : strings) {
-            if (text.contains(string)) {
-                return true;
-            }
+        return Arrays.stream(strings)
+                .anyMatch(s -> text.contains(s));
+    }
+
+    /**
+     * Extract data from quoted string.
+     *
+     * @param quotedString string to extract data from
+     * @return string without quotes
+     */
+    public static String extractContentFromQuotedString(String quotedString) {
+        if (quotedString == null) {
+            return null;
         }
-        return false;
+
+        if (quotedString.matches("^\".*\"$")) {
+            return quotedString.substring(1, quotedString.length() - 1);
+        }
+        return quotedString;
     }
 }

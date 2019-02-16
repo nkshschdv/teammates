@@ -1,7 +1,9 @@
 package teammates.test.cases.datatransfer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.testng.annotations.Test;
 
@@ -77,10 +79,35 @@ public class CourseRosterTest extends BaseTestCase {
 
     }
 
+    @Test
+    public void testGetEmailToNameTableFromRoster() {
+        Map<String, String> emailToNameTableExpected = new HashMap<>();
+
+        emailToNameTableExpected.put("ins1@email.com", "Jess");
+        emailToNameTableExpected.put("s1@gmail.com", "student 1");
+        emailToNameTableExpected.put("s2@gmail.com", "student 2");
+
+        List<StudentAttributes> students = new ArrayList<>();
+        StudentAttributes student1 = StudentAttributes
+                .builder("", "student 1", "s1@gmail.com")
+                .build();
+        StudentAttributes student2 = StudentAttributes
+                .builder("", "student 2", "s2@gmail.com")
+                .build();
+        students.add(student1);
+        students.add(student2);
+
+        CourseRoster roster = new CourseRoster(students, createInstructorList("Jess", "ins1@email.com"));
+        Map<String, String> emailToNameTableActual = roster.getEmailToNameTableFromRoster();
+        assertEquals(emailToNameTableExpected, emailToNameTableActual);
+    }
+
     private List<StudentAttributes> createStudentList(String... studentData) {
-        List<StudentAttributes> students = new ArrayList<StudentAttributes>();
+        List<StudentAttributes> students = new ArrayList<>();
         for (int i = 0; i < studentData.length; i += 2) {
-            StudentAttributes student = new StudentAttributes();
+            StudentAttributes student = StudentAttributes
+                    .builder("", "", "")
+                    .build();
             student.team = studentData[i];
             student.email = studentData[i + 1];
             students.add(student);
@@ -89,11 +116,12 @@ public class CourseRosterTest extends BaseTestCase {
     }
 
     private List<InstructorAttributes> createInstructorList(String... instructorData) {
-        List<InstructorAttributes> instructors = new ArrayList<InstructorAttributes>();
+        List<InstructorAttributes> instructors = new ArrayList<>();
         for (int i = 0; i < instructorData.length; i += 2) {
             @SuppressWarnings("deprecation")
-            InstructorAttributes instructor =
-                    new InstructorAttributes("googleId", "courseId", instructorData[i], instructorData[i + 1]);
+            InstructorAttributes instructor = InstructorAttributes
+                    .builder("googleId", "courseId", instructorData[i], instructorData[i + 1])
+                    .build();
             instructors.add(instructor);
         }
         return instructors;

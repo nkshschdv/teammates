@@ -212,13 +212,11 @@ public final class NationalityHelper {
             "Yemenite",
             "Zambian",
             "Zimbabwean",
-            "Other"
+            "Other",
     };
 
-    /**
-     * This prevents instantiation. This is necessary because this is a utility class.
-     */
     private NationalityHelper() {
+        // utility class
     }
 
     /**

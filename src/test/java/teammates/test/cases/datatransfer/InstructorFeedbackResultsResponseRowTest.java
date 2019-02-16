@@ -15,7 +15,7 @@ public class InstructorFeedbackResultsResponseRowTest extends BaseTestCase {
 
     @Test
     public void testDefaultSortOrderWithSameTeam() {
-        List<InstructorFeedbackResultsResponseRow> responseRows = new ArrayList<InstructorFeedbackResultsResponseRow>();
+        List<InstructorFeedbackResultsResponseRow> responseRows = new ArrayList<>();
         responseRows.add(createNewFeedbackResponseRow("Team1", "Alice Betsy"));
         responseRows.add(createNewFeedbackResponseRow("Team1", "Emma Farrell"));
         responseRows.add(createNewFeedbackResponseRow("Team1", "Benny Charles"));
@@ -32,7 +32,7 @@ public class InstructorFeedbackResultsResponseRowTest extends BaseTestCase {
 
     @Test
     public void testDefaultSortOrderWithDifferentTeams() {
-        List<InstructorFeedbackResultsResponseRow> responseRows = new ArrayList<InstructorFeedbackResultsResponseRow>();
+        List<InstructorFeedbackResultsResponseRow> responseRows = new ArrayList<>();
         responseRows.add(createNewFeedbackResponseRow("Team1", "Alice Betsy"));
         responseRows.add(createNewFeedbackResponseRow("Team2", "Emma Farrell"));
         responseRows.add(createNewFeedbackResponseRow("Team3", "Benny Charles"));
@@ -51,7 +51,7 @@ public class InstructorFeedbackResultsResponseRowTest extends BaseTestCase {
     private InstructorFeedbackResultsResponseRow createNewFeedbackResponseRow(String giverTeam,
             String giverDisplayableIdentifier) {
         return new InstructorFeedbackResultsResponseRow(giverDisplayableIdentifier, giverTeam, null, null,
-                null, null);
+                null, null, false);
     }
 
 }

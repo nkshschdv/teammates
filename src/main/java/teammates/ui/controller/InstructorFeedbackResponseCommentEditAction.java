@@ -1,9 +1,8 @@
 package teammates.ui.controller;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
-
-import com.google.appengine.api.datastore.Text;
+import java.util.List;
 
 import teammates.common.datatransfer.FeedbackParticipantType;
 import teammates.common.datatransfer.attributes.FeedbackResponseAttributes;
@@ -14,7 +13,7 @@ import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Assumption;
 import teammates.common.util.Const;
-import teammates.ui.pagedata.InstructorFeedbackResponseCommentAjaxPageData;
+import teammates.ui.pagedata.FeedbackResponseCommentAjaxPageData;
 
 /**
  * Action: Edit {@link FeedbackResponseCommentAttributes}.
@@ -42,10 +41,10 @@ public class InstructorFeedbackResponseCommentEditAction extends InstructorFeedb
         verifyAccessibleForInstructorToFeedbackResponseComment(
                 feedbackResponseCommentId, instructor, session, response);
 
-        InstructorFeedbackResponseCommentAjaxPageData data =
-                new InstructorFeedbackResponseCommentAjaxPageData(account, sessionToken);
+        FeedbackResponseCommentAjaxPageData data =
+                new FeedbackResponseCommentAjaxPageData(account, sessionToken);
 
-        //Edit comment text
+        // Edit comment text
         String commentText = getRequestParamValue(Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT);
         Assumption.assertPostParamNotNull(Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT, commentText);
         if (commentText.trim().isEmpty()) {
@@ -54,32 +53,35 @@ public class InstructorFeedbackResponseCommentEditAction extends InstructorFeedb
             return createAjaxResult(data);
         }
 
-        FeedbackResponseCommentAttributes feedbackResponseComment = new FeedbackResponseCommentAttributes(
-                courseId, feedbackSessionName, null, instructor.email, null, new Date(),
-                new Text(commentText), response.giverSection, response.recipientSection);
-        feedbackResponseComment.setId(Long.parseLong(feedbackResponseCommentId));
+        FeedbackResponseCommentAttributes.UpdateOptions.Builder commentUpdateOptions =
+                FeedbackResponseCommentAttributes.updateOptionsBuilder(Long.parseLong(feedbackResponseCommentId))
+                        .withCommentText(commentText)
+                        .withLastEditorEmail(instructor.email)
+                        .withLastEditorAt(Instant.now());
 
-        //Edit visibility settings
+        // edit visibility settings
         String showCommentTo = getRequestParamValue(Const.ParamsNames.RESPONSE_COMMENTS_SHOWCOMMENTSTO);
         String showGiverNameTo = getRequestParamValue(Const.ParamsNames.RESPONSE_COMMENTS_SHOWGIVERTO);
-        feedbackResponseComment.showCommentTo = new ArrayList<FeedbackParticipantType>();
         if (showCommentTo != null && !showCommentTo.isEmpty()) {
             String[] showCommentToArray = showCommentTo.split(",");
+            List<FeedbackParticipantType> showCommentToList = new ArrayList<>();
             for (String viewer : showCommentToArray) {
-                feedbackResponseComment.showCommentTo.add(FeedbackParticipantType.valueOf(viewer.trim()));
+                showCommentToList.add(FeedbackParticipantType.valueOf(viewer.trim()));
             }
+            commentUpdateOptions.withShowCommentTo(showCommentToList);
         }
-        feedbackResponseComment.showGiverNameTo = new ArrayList<FeedbackParticipantType>();
         if (showGiverNameTo != null && !showGiverNameTo.isEmpty()) {
             String[] showGiverNameToArray = showGiverNameTo.split(",");
+            List<FeedbackParticipantType> showGiverNameToList = new ArrayList<>();
             for (String viewer : showGiverNameToArray) {
-                feedbackResponseComment.showGiverNameTo.add(FeedbackParticipantType.valueOf(viewer.trim()));
+                showGiverNameToList.add(FeedbackParticipantType.valueOf(viewer.trim()));
             }
+            commentUpdateOptions.withShowGiverNameTo(showGiverNameToList);
         }
 
+        FeedbackResponseCommentAttributes updatedComment = null;
         try {
-            FeedbackResponseCommentAttributes updatedComment =
-                    logic.updateFeedbackResponseComment(feedbackResponseComment);
+            updatedComment = logic.updateFeedbackResponseComment(commentUpdateOptions.build());
             //TODO: move putDocument to task queue
             logic.putDocument(updatedComment);
         } catch (InvalidParametersException e) {
@@ -90,14 +92,22 @@ public class InstructorFeedbackResponseCommentEditAction extends InstructorFeedb
 
         if (!data.isError) {
             statusToAdmin += "InstructorFeedbackResponseCommentEditAction:<br>"
-                           + "Editing feedback response comment: " + feedbackResponseComment.getId() + "<br>"
-                           + "in course/feedback session: " + feedbackResponseComment.courseId + "/"
-                           + feedbackResponseComment.feedbackSessionName + "<br>"
-                           + "by: " + feedbackResponseComment.giverEmail + "<br>"
-                           + "comment text: " + feedbackResponseComment.commentText.getValue();
-        }
+                           + "Editing feedback response comment: " + updatedComment.getId() + "<br>"
+                           + "in course/feedback session: " + updatedComment.courseId + "/"
+                           + updatedComment.feedbackSessionName + "<br>"
+                           + "by: " + updatedComment.commentGiver + "<br>"
+                           + "comment text: " + updatedComment.commentText;
 
-        data.comment = feedbackResponseComment;
+            String commentGiverName = logic.getInstructorForEmail(courseId, frc.commentGiver).name;
+            String commentEditorName = instructor.name;
+
+            // createdAt and lastEditedAt fields in updatedComment as well as sessionTimeZone
+            // are required to generate timestamps in editedCommentDetails
+            data.comment = updatedComment;
+            data.sessionTimeZone = session.getTimeZone();
+
+            data.editedCommentDetails = data.createEditedCommentDetails(commentGiverName, commentEditorName);
+        }
 
         return createAjaxResult(data);
     }

@@ -1,6 +1,5 @@
 package teammates.storage.search;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -14,7 +13,6 @@ import teammates.common.datatransfer.attributes.CourseAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.datatransfer.attributes.StudentAttributes;
 import teammates.common.util.Const;
-import teammates.common.util.JsonUtils;
 import teammates.common.util.StringHelper;
 
 /**
@@ -59,39 +57,24 @@ public class StudentSearchDocument extends SearchDocument {
                 // searchableText and createdDate are used to match the query string
                 .addField(Field.newBuilder().setName(Const.SearchDocumentField.SEARCHABLE_TEXT)
                                             .setText(searchableText))
-                // attribute field is used to convert a doc back to attribute
-                .addField(Field.newBuilder().setName(Const.SearchDocumentField.STUDENT_ATTRIBUTE)
-                                            .setText(JsonUtils.toJson(student)))
                 .setId(student.key)
                 .build();
     }
 
     /**
      * Produces a {@link StudentSearchResultBundle} from the {@code Results<ScoredDocument>} collection.
-     * The list of {@link InstructorAttributes} is used to filter out the search result.
+     *
+     * <p>The list of {@link InstructorAttributes} is used to filter out the search result.</p>
      *
      * <p>This method should be used by admin only since the searching does not restrict the
-     * visibility according to the logged-in user's google ID.
+     * visibility according to the logged-in user's google ID.</p>
      */
     public static StudentSearchResultBundle fromResults(Results<ScoredDocument> results) {
-        StudentSearchResultBundle bundle = new StudentSearchResultBundle();
         if (results == null) {
-            return bundle;
+            return new StudentSearchResultBundle();
         }
 
-        for (ScoredDocument doc : results) {
-            StudentAttributes student = JsonUtils.fromJson(
-                    doc.getOnlyField(Const.SearchDocumentField.STUDENT_ATTRIBUTE).getText(),
-                    StudentAttributes.class);
-            if (student.key == null
-                    || studentsDb.getStudentForRegistrationKey(StringHelper.encrypt(student.key)) == null) {
-                studentsDb.deleteDocument(student);
-                continue;
-            }
-
-            bundle.studentList.add(student);
-            bundle.numberOfResults++;
-        }
+        StudentSearchResultBundle bundle = constructBaseBundle(results);
 
         sortStudentResultList(bundle.studentList);
 
@@ -100,32 +83,20 @@ public class StudentSearchDocument extends SearchDocument {
 
     /**
      * Produces a {@link StudentSearchResultBundle} from the {@code Results<ScoredDocument>} collection.
-     * The list of {@link InstructorAttributes} is used to filter out the search result.
+     *
+     * <p>The list of {@link InstructorAttributes} is used to filter out the search result.</p>
      */
     public static StudentSearchResultBundle fromResults(Results<ScoredDocument> results,
                                                         List<InstructorAttributes> instructors) {
-        StudentSearchResultBundle bundle = new StudentSearchResultBundle();
         if (results == null) {
-            return bundle;
-        }
-
-        for (InstructorAttributes ins : instructors) {
-            bundle.courseIdInstructorMap.put(ins.courseId, ins);
+            return new StudentSearchResultBundle();
         }
 
         List<ScoredDocument> filteredResults = filterOutCourseId(results, instructors);
-        for (ScoredDocument doc : filteredResults) {
-            StudentAttributes student = JsonUtils.fromJson(
-                    doc.getOnlyField(Const.SearchDocumentField.STUDENT_ATTRIBUTE).getText(),
-                    StudentAttributes.class);
-            if (student.key == null
-                    || studentsDb.getStudentForRegistrationKey(StringHelper.encrypt(student.key)) == null) {
-                studentsDb.deleteDocument(student);
-                continue;
-            }
+        StudentSearchResultBundle bundle = constructBaseBundle(filteredResults);
 
-            bundle.studentList.add(student);
-            bundle.numberOfResults++;
+        for (InstructorAttributes ins : instructors) {
+            bundle.courseIdInstructorMap.put(ins.courseId, ins);
         }
 
         sortStudentResultList(bundle.studentList);
@@ -133,34 +104,32 @@ public class StudentSearchDocument extends SearchDocument {
         return bundle;
     }
 
+    private static StudentSearchResultBundle constructBaseBundle(Iterable<ScoredDocument> results) {
+        StudentSearchResultBundle bundle = new StudentSearchResultBundle();
+
+        for (ScoredDocument doc : results) {
+            StudentAttributes student = studentsDb.getStudentForRegistrationKey(StringHelper.encrypt(doc.getId()));
+            if (student == null) {
+                // search engine out of sync as SearchManager may fail to delete documents due to GAE error
+                // the chance is low and it is generally not a big problem
+                studentsDb.deleteDocumentByStudentKey(doc.getId());
+                continue;
+            }
+
+            bundle.studentList.add(student);
+            bundle.numberOfResults++;
+        }
+
+        return bundle;
+    }
+
     private static void sortStudentResultList(List<StudentAttributes> studentList) {
 
-        Collections.sort(studentList, new Comparator<StudentAttributes>() {
-            @Override
-            public int compare(StudentAttributes s1, StudentAttributes s2) {
-                int compareResult = s1.course.compareTo(s2.course);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                compareResult = s1.section.compareTo(s2.section);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                compareResult = s1.team.compareTo(s2.team);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                compareResult = s1.name.compareTo(s2.name);
-                if (compareResult != 0) {
-                    return compareResult;
-                }
-
-                return s1.email.compareTo(s2.email);
-            }
-        });
+        studentList.sort(Comparator.comparing((StudentAttributes student) -> student.course)
+                .thenComparing(student -> student.section)
+                .thenComparing(student -> student.team)
+                .thenComparing(student -> student.name)
+                .thenComparing(student -> student.email));
     }
 
 }

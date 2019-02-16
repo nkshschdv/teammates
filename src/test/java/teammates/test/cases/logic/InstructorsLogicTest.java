@@ -1,12 +1,16 @@
 package teammates.test.cases.logic;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import teammates.common.datatransfer.InstructorPrivileges;
+import teammates.common.datatransfer.attributes.FeedbackResponseCommentAttributes;
+import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
 import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
@@ -14,6 +18,9 @@ import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Const;
 import teammates.common.util.StringHelper;
 import teammates.logic.core.CoursesLogic;
+import teammates.logic.core.FeedbackResponseCommentsLogic;
+import teammates.logic.core.FeedbackResponsesLogic;
+import teammates.logic.core.FeedbackSessionsLogic;
 import teammates.logic.core.InstructorsLogic;
 import teammates.storage.api.InstructorsDb;
 import teammates.test.driver.AssertHelper;
@@ -27,15 +34,21 @@ public class InstructorsLogicTest extends BaseLogicTest {
     private static InstructorsDb instructorsDb = new InstructorsDb();
     private static CoursesLogic coursesLogic = CoursesLogic.inst();
 
-    @BeforeClass
-    public void classSetup() {
+    @Override
+    protected void prepareTestData() {
+        // test data is refreshed before each test case
+    }
+
+    @BeforeMethod
+    public void refreshTestData() {
+        dataBundle = getTypicalDataBundle();
+        removeAndRestoreTypicalDataBundle();
         instructorsLogic.deleteInstructorCascade("FSQTT.idOfTypicalCourse1", "instructor3@course1.tmt");
     }
 
     @Test
     public void testAll() throws Exception {
         testGetInstructorForEmail();
-        testGetInstructorsForEmail();
         testGetInstructorForGoogleId();
         testGetInstructorsForGoogleId();
         testGetInstructorForRegistrationKey();
@@ -47,7 +60,8 @@ public class InstructorsLogicTest extends BaseLogicTest {
         testVerifyIsEmailOfInstructorOfCourse();
         testIsNewInstructor();
         testAddInstructor();
-        testUpdateInstructorByGoogleId();
+        testGetCoOwnersForCourse();
+        testUpdateInstructorByGoogleIdCascade();
         testUpdateInstructorByEmail();
         testDeleteInstructor();
         testDeleteInstructorsForGoogleId();
@@ -65,8 +79,11 @@ public class InstructorsLogicTest extends BaseLogicTest {
         String displayedName = InstructorAttributes.DEFAULT_DISPLAY_NAME;
         InstructorPrivileges privileges =
                 new InstructorPrivileges(Const.InstructorPermissionRoleNames.INSTRUCTOR_PERMISSION_ROLE_COOWNER);
-        InstructorAttributes instr =
-                new InstructorAttributes(null, courseId, name, email, role, displayedName, privileges);
+        InstructorAttributes instr = InstructorAttributes.builder(null, courseId, name, email)
+                .withRole(role)
+                .withDisplayedName(displayedName)
+                .withPrivileges(privileges)
+                .build();
 
         instructorsLogic.createInstructor(instr);
 
@@ -74,12 +91,9 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: instructor already exists");
 
-        try {
-            instructorsLogic.createInstructor(instr);
-            signalFailureToDetectException();
-        } catch (EntityAlreadyExistsException e) {
-            AssertHelper.assertContains("Trying to create a Instructor that exists", e.getMessage());
-        }
+        EntityAlreadyExistsException ednee = assertThrows(EntityAlreadyExistsException.class,
+                () -> instructorsLogic.createInstructor(instr));
+        AssertHelper.assertContains("Trying to create a Instructor that exists", ednee.getMessage());
 
         instructorsLogic.deleteInstructorCascade(instr.courseId, instr.email);
 
@@ -92,21 +106,14 @@ public class InstructorsLogicTest extends BaseLogicTest {
                 + "some text followed by one '@' sign followed by some more text. "
                 + "It cannot be longer than 254 characters, cannot be empty and "
                 + "cannot contain spaces.";
-        try {
-            instructorsLogic.createInstructor(instr);
-            signalFailureToDetectException();
-        } catch (InvalidParametersException e) {
-            assertEquals(expectedError, e.getMessage());
-        }
+        InvalidParametersException ipe = assertThrows(InvalidParametersException.class,
+                () -> instructorsLogic.createInstructor(instr));
+        assertEquals(expectedError, ipe.getMessage());
 
         ______TS("failure: null parameters");
 
-        try {
-            instructorsLogic.createInstructor(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.createInstructor(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testGetInstructorForEmail() {
@@ -129,19 +136,11 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameters");
 
-        try {
-            instructorsLogic.getInstructorForEmail(null, email);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.getInstructorForEmail(null, email));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.getInstructorForEmail(courseId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.getInstructorForEmail(courseId, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -165,19 +164,12 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameters");
 
-        try {
-            instructorsLogic.getInstructorForGoogleId(null, googleId);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.getInstructorForGoogleId(null, googleId));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.getInstructorForGoogleId(courseId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.getInstructorForGoogleId(courseId, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -202,12 +194,9 @@ public class InstructorsLogicTest extends BaseLogicTest {
         assertEquals(instr.email, retrieved.email);
 
         ______TS("failure: null parameter");
-        try {
-            instructorsLogic.getInstructorForRegistrationKey(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.getInstructorForRegistrationKey(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testGetInstructorsForCourse() throws Exception {
@@ -219,15 +208,13 @@ public class InstructorsLogicTest extends BaseLogicTest {
         List<InstructorAttributes> instructors = instructorsLogic.getInstructorsForCourse(courseId);
         assertEquals(5, instructors.size());
 
-        HashMap<String, Boolean> idMap = new HashMap<String, Boolean>();
+        Map<String, Boolean> idMap = new HashMap<>();
         idMap.put("idOfInstructor1OfCourse1", false);
         idMap.put("idOfInstructor2OfCourse1", false);
         idMap.put("idOfInstructor3", false);
 
         for (InstructorAttributes i : instructors) {
-            if (idMap.containsKey(i.googleId)) {
-                idMap.put(i.googleId, true);
-            }
+            idMap.computeIfPresent(i.googleId, (key, value) -> true);
         }
 
         assertTrue(idMap.get("idOfInstructor1OfCourse1").booleanValue());
@@ -244,12 +231,8 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameters");
 
-        try {
-            instructorsLogic.getInstructorsForCourse(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.getInstructorsForCourse(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testGetInstructorsForGoogleId() {
@@ -276,41 +259,8 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.getInstructorsForGoogleId(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
-    }
-
-    private void testGetInstructorsForEmail() {
-
-        ______TS("success: get all instructors for a google id");
-
-        String email = "instructor3@course1.tmt";
-
-        List<InstructorAttributes> instructors = instructorsLogic.getInstructorsForEmail(email);
-        assertEquals(1, instructors.size());
-
-        InstructorAttributes instructor1 = instructorsDb.getInstructorForEmail("idOfTypicalCourse1", email);
-        verifySameInstructor(instructor1, instructors.get(0));
-
-        ______TS("failure: non-exist email");
-
-        email = "non-exist-email@course1.tmt";
-
-        instructors = instructorsLogic.getInstructorsForEmail(email);
-        assertEquals(0, instructors.size());
-
-        ______TS("failure: null parameter");
-
-        try {
-            instructorsLogic.getInstructorsForEmail(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.getInstructorsForGoogleId(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testGetKeyForInstructor() throws Exception {
@@ -328,29 +278,19 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: non-existent instructor");
 
-        try {
-            instructorsLogic.getEncryptedKeyForInstructor(courseId, "non-existent@email.tmt");
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Instructor " + "non-existent@email.tmt"
-                    + " does not belong to course " + courseId, e.getMessage());
-        }
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.getEncryptedKeyForInstructor(courseId, "non-existent@email.tmt"));
+        assertEquals("Instructor non-existent@email.tmt does not belong to course " + courseId,
+                ednee.getMessage());
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.getEncryptedKeyForInstructor(courseId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.getEncryptedKeyForInstructor(courseId, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.getEncryptedKeyForInstructor(null, email);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.getEncryptedKeyForInstructor(null, email));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -359,15 +299,14 @@ public class InstructorsLogicTest extends BaseLogicTest {
         ______TS("success: is an instructor of a given course");
 
         String instructorId = "idOfInstructor1OfCourse1";
-        String courseId = "idOfTypicalCourse1";
 
-        boolean result = instructorsLogic.isGoogleIdOfInstructorOfCourse(instructorId, courseId);
+        boolean result = instructorsLogic.isGoogleIdOfInstructorOfCourse(instructorId, "idOfTypicalCourse1");
 
         assertTrue(result);
 
         ______TS("failure: not an instructor of a given course");
 
-        courseId = "idOfTypicalCourse2";
+        String courseId = "idOfTypicalCourse2";
 
         result = instructorsLogic.isGoogleIdOfInstructorOfCourse(instructorId, courseId);
 
@@ -375,19 +314,12 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.isGoogleIdOfInstructorOfCourse(null, courseId);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.isGoogleIdOfInstructorOfCourse(null, courseId));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.isGoogleIdOfInstructorOfCourse(instructorId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.isGoogleIdOfInstructorOfCourse(instructorId, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testIsEmailOfInstructorOfCourse() {
@@ -395,15 +327,14 @@ public class InstructorsLogicTest extends BaseLogicTest {
         ______TS("success: is an instructor of a given course");
 
         String instructorEmail = "instructor1@course1.tmt";
-        String courseId = "idOfTypicalCourse1";
 
-        boolean result = instructorsLogic.isEmailOfInstructorOfCourse(instructorEmail, courseId);
+        boolean result = instructorsLogic.isEmailOfInstructorOfCourse(instructorEmail, "idOfTypicalCourse1");
 
         assertTrue(result);
 
         ______TS("failure: not an instructor of a given course");
 
-        courseId = "idOfTypicalCourse2";
+        String courseId = "idOfTypicalCourse2";
 
         result = instructorsLogic.isEmailOfInstructorOfCourse(instructorEmail, courseId);
 
@@ -411,19 +342,12 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.isEmailOfInstructorOfCourse(instructorEmail, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.isEmailOfInstructorOfCourse(instructorEmail, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.isEmailOfInstructorOfCourse(null, courseId);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.isEmailOfInstructorOfCourse(null, courseId));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -431,63 +355,43 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("success: instructor does exist");
 
-        String instructorId = "idOfInstructor1OfCourse1";
-        instructorsLogic.verifyInstructorExists(instructorId);
+        instructorsLogic.verifyInstructorExists("idOfInstructor1OfCourse1");
 
         ______TS("failure: instructor doesn't exist");
 
-        instructorId = "nonExistingInstructor";
-
-        try {
-            instructorsLogic.verifyInstructorExists(instructorId);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            AssertHelper.assertContains("Instructor does not exist", e.getMessage());
-        }
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.verifyInstructorExists("nonExistingInstructor"));
+        AssertHelper.assertContains("Instructor does not exist", ednee.getMessage());
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.verifyInstructorExists(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.verifyInstructorExists(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testVerifyIsEmailOfInstructorOfCourse() throws Exception {
 
         ______TS("success: instructor belongs to course");
 
-        String instructorEmail = "instructor1@course1.tmt";
         String courseId = "idOfTypicalCourse1";
-        instructorsLogic.verifyIsEmailOfInstructorOfCourse(instructorEmail, courseId);
+        instructorsLogic.verifyIsEmailOfInstructorOfCourse("instructor1@course1.tmt", courseId);
 
         ______TS("failure: instructor doesn't belong to course");
-        instructorEmail = "nonExistingInstructor@email.tmt";
+        String instructorEmail = "nonExistingInstructor@email.tmt";
 
-        try {
-            instructorsLogic.verifyIsEmailOfInstructorOfCourse(instructorEmail, courseId);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Instructor " + instructorEmail
-                    + " does not belong to course " + courseId, e.getMessage());
-        }
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.verifyIsEmailOfInstructorOfCourse(instructorEmail, courseId));
+        assertEquals("Instructor " + instructorEmail + " does not belong to course " + courseId,
+                ednee.getMessage());
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.verifyIsEmailOfInstructorOfCourse(null, courseId);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.verifyIsEmailOfInstructorOfCourse(null, courseId));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.verifyIsEmailOfInstructorOfCourse(instructorEmail, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.verifyIsEmailOfInstructorOfCourse(instructorEmail, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
     }
 
     private void testIsNewInstructor() {
@@ -514,16 +418,57 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.isNewInstructor(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.isNewInstructor(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
-    private void testUpdateInstructorByGoogleId() throws Exception {
+    @Test
+    public void testUpdateInstructorByGoogleIdCascade_shouldDoCascadeUpdateToCommentsAndResponses() throws Exception {
+        FeedbackSessionsLogic fsLogic = FeedbackSessionsLogic.inst();
+        FeedbackResponsesLogic frLogic = FeedbackResponsesLogic.inst();
+        FeedbackResponseCommentsLogic frcLogic = FeedbackResponseCommentsLogic.inst();
+        InstructorAttributes instructorToBeUpdated = dataBundle.instructors.get("instructor1OfCourse1");
+
+        instructorsLogic.updateInstructorByGoogleIdCascade(
+                InstructorAttributes
+                        .updateOptionsWithGoogleIdBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.googleId)
+                        .withEmail("new@email.tmt")
+                        .build());
+
+        // responses are updated
+        assertTrue(frLogic.getFeedbackResponsesFromGiverForCourse(
+                instructorToBeUpdated.getCourseId(), instructorToBeUpdated.getEmail()).isEmpty());
+        assertTrue(frLogic.getFeedbackResponsesForReceiverForCourse(
+                instructorToBeUpdated.getCourseId(), instructorToBeUpdated.getEmail()).isEmpty());
+        assertFalse(frLogic.getFeedbackResponsesFromGiverForCourse(
+                instructorToBeUpdated.getCourseId(), "new@email.tmt").isEmpty());
+        assertFalse(frLogic.getFeedbackResponsesForReceiverForCourse(
+                instructorToBeUpdated.getCourseId(), "new@email.tmt").isEmpty());
+
+        // comment giver are updated
+        assertTrue(frcLogic.getFeedbackResponseCommentsForGiver(
+                instructorToBeUpdated.getCourseId(), instructorToBeUpdated.getEmail()).isEmpty());
+        List<FeedbackResponseCommentAttributes> commentsGivenByTheInstructor =
+                frcLogic.getFeedbackResponseCommentsForGiver(instructorToBeUpdated.getCourseId(), "new@email.tmt");
+        assertFalse(commentsGivenByTheInstructor.isEmpty());
+
+        // last editor is updated
+        assertTrue(commentsGivenByTheInstructor.stream().anyMatch(c -> "new@email.tmt".equals(c.lastEditorEmail)));
+        assertFalse(commentsGivenByTheInstructor.stream()
+                .anyMatch(c -> instructorToBeUpdated.getEmail().equals(c.lastEditorEmail)));
+
+        // respondents in session is updated
+        List<FeedbackSessionAttributes> sessionsInCourse =
+                fsLogic.getFeedbackSessionsForCourse(instructorToBeUpdated.getCourseId());
+        assertTrue(sessionsInCourse.stream()
+                .anyMatch(s -> s.getRespondingInstructorList().contains("new@email.tmt")));
+        assertFalse(sessionsInCourse.stream()
+                .anyMatch(s -> s.getRespondingInstructorList().contains(instructorToBeUpdated.getEmail())));
+    }
+
+    private void testUpdateInstructorByGoogleIdCascade() throws Exception {
 
         ______TS("typical case: update an instructor");
 
@@ -534,43 +479,46 @@ public class InstructorsLogicTest extends BaseLogicTest {
         instructorToBeUpdated.name = "New Name";
         instructorToBeUpdated.email = "new-email@course1.tmt";
 
-        instructorsLogic.updateInstructorByGoogleId(googleId, instructorToBeUpdated);
+        InstructorAttributes updatedInstructor = instructorsLogic.updateInstructorByGoogleIdCascade(
+                InstructorAttributes
+                        .updateOptionsWithGoogleIdBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.googleId)
+                        .withName(instructorToBeUpdated.name)
+                        .withEmail(instructorToBeUpdated.email)
+                        .build());
 
         InstructorAttributes instructorUpdated = instructorsLogic.getInstructorForGoogleId(courseId, googleId);
         verifySameInstructor(instructorToBeUpdated, instructorUpdated);
+        verifySameInstructor(instructorToBeUpdated, updatedInstructor);
 
         ______TS("failure: instructor doesn't exist");
 
         instructorsLogic.deleteInstructorCascade(courseId, instructorUpdated.email);
 
-        try {
-            instructorsLogic.updateInstructorByGoogleId(googleId, instructorUpdated);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Instructor " + googleId + " does not belong to course " + courseId, e.getMessage());
-        }
+        InstructorAttributes.UpdateOptionsWithGoogleId updateOptions =
+                InstructorAttributes
+                        .updateOptionsWithGoogleIdBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.googleId)
+                        .withName("New Name")
+                        .build();
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.updateInstructorByGoogleIdCascade(updateOptions));
+        assertEquals("Trying to update non-existent Entity: " + updateOptions, ednee.getMessage());
 
         ______TS("failure: course doesn't exist");
 
         courseId = "random-course";
         instructorToBeUpdated.courseId = courseId;
 
-        try {
-            instructorsLogic.updateInstructorByGoogleId(googleId, instructorToBeUpdated);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Course does not exist: " + courseId, e.getMessage());
-        }
-
-        ______TS("failure: null parameter");
-
-        try {
-            instructorsLogic.updateInstructorByGoogleId(googleId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
-
+        InstructorAttributes.UpdateOptionsWithGoogleId anotherUpdateOptions =
+                InstructorAttributes
+                        .updateOptionsWithGoogleIdBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.googleId)
+                        .withName("New Name")
+                        .build();
+        ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.updateInstructorByGoogleIdCascade(anotherUpdateOptions));
+        assertEquals("Trying to update non-existent Entity: " + anotherUpdateOptions, ednee.getMessage());
     }
 
     private void testUpdateInstructorByEmail() throws Exception {
@@ -587,42 +535,52 @@ public class InstructorsLogicTest extends BaseLogicTest {
         instructorToBeUpdated.googleId = newGoogleId;
         instructorToBeUpdated.name = newName;
 
-        instructorsLogic.updateInstructorByEmail(email, instructorToBeUpdated);
+        InstructorAttributes updatedInstructor = instructorsLogic.updateInstructorByEmail(
+                InstructorAttributes
+                        .updateOptionsWithEmailBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.email)
+                        .withName(instructorToBeUpdated.name)
+                        .withGoogleId(instructorToBeUpdated.googleId)
+                        .build());
 
         InstructorAttributes instructorUpdated = instructorsLogic.getInstructorForEmail(courseId, email);
         verifySameInstructor(instructorToBeUpdated, instructorUpdated);
+        verifySameInstructor(instructorToBeUpdated, updatedInstructor);
 
         ______TS("failure: instructor doesn't belong to course");
 
         instructorsLogic.deleteInstructorCascade(courseId, instructorToBeUpdated.email);
 
-        try {
-            instructorsLogic.updateInstructorByEmail(email, instructorToBeUpdated);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Instructor " + email + " does not belong to course " + courseId, e.getMessage());
-        }
+        InstructorAttributes.UpdateOptionsWithEmail updateOptions =
+                InstructorAttributes
+                        .updateOptionsWithEmailBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.email)
+                        .withName("New Name")
+                        .build();
+        EntityDoesNotExistException ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.updateInstructorByEmail(updateOptions));
+        assertEquals("Trying to update non-existent Entity: " + updateOptions, ednee.getMessage());
 
         ______TS("failure: course doesn't exist");
 
         courseId = "random-course";
         instructorToBeUpdated.courseId = courseId;
 
-        try {
-            instructorsLogic.updateInstructorByEmail(email, instructorToBeUpdated);
-            signalFailureToDetectException();
-        } catch (EntityDoesNotExistException e) {
-            assertEquals("Course does not exist: " + courseId, e.getMessage());
-        }
+        InstructorAttributes.UpdateOptionsWithEmail anotherUpdateOptions =
+                InstructorAttributes
+                        .updateOptionsWithEmailBuilder(
+                                instructorToBeUpdated.courseId, instructorToBeUpdated.email)
+                        .withName("New Name")
+                        .build();
+        ednee = assertThrows(EntityDoesNotExistException.class,
+                () -> instructorsLogic.updateInstructorByEmail(anotherUpdateOptions));
+        assertEquals("Trying to update non-existent Entity: " + anotherUpdateOptions, ednee.getMessage());
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.updateInstructorByEmail(email, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.updateInstructorByEmail(null));
+        assertEquals("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -645,19 +603,12 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.deleteInstructorCascade(courseId, null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.deleteInstructorCascade(courseId, null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
-        try {
-            instructorsLogic.deleteInstructorCascade(null, email);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        ae = assertThrows(AssertionError.class, () -> instructorsLogic.deleteInstructorCascade(null, email));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
         // restore deleted instructor
         instructorsLogic.createInstructor(instructorDeleted);
@@ -681,12 +632,9 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure: null parameter");
 
-        try {
-            instructorsLogic.deleteInstructorsForGoogleIdAndCascade(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class,
+                () -> instructorsLogic.deleteInstructorsForGoogleIdAndCascade(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
         // restore deleted instructors
         for (InstructorAttributes instructor : instructors) {
@@ -712,12 +660,8 @@ public class InstructorsLogicTest extends BaseLogicTest {
 
         ______TS("failure case: null parameter");
 
-        try {
-            instructorsLogic.deleteInstructorsForCourse(null);
-            signalFailureToDetectException();
-        } catch (AssertionError e) {
-            AssertHelper.assertContains("Supplied parameter was null", e.getMessage());
-        }
+        AssertionError ae = assertThrows(AssertionError.class, () -> instructorsLogic.deleteInstructorsForCourse(null));
+        AssertHelper.assertContains("Supplied parameter was null", ae.getMessage());
 
     }
 
@@ -726,6 +670,35 @@ public class InstructorsLogicTest extends BaseLogicTest {
         assertEquals(instructor1.courseId, instructor2.courseId);
         assertEquals(instructor1.name, instructor2.name);
         assertEquals(instructor1.email, instructor2.email);
+    }
+
+    private void testGetCoOwnersForCourse() {
+        ______TS("Verify co-owner status of generated co-owners list");
+        String courseId = "idOfTypicalCourse1";
+        List<InstructorAttributes> generatedCoOwners = instructorsLogic.getCoOwnersForCourse(courseId);
+        for (InstructorAttributes generatedCoOwner : generatedCoOwners) {
+            assertTrue(generatedCoOwner.hasCoownerPrivileges());
+        }
+
+        ______TS("Verify all co-owners present in generated co-owners list");
+
+        // Generate ArrayList<String> of emails of all coOwners in course from data bundle
+        List<String> coOwnersEmailsFromDataBundle = new ArrayList<>();
+        for (InstructorAttributes instructor : new ArrayList<>(dataBundle.instructors.values())) {
+            if (!(instructor.getCourseId().equals(courseId) && instructor.hasCoownerPrivileges())) {
+                continue;
+            }
+            coOwnersEmailsFromDataBundle.add(instructor.email);
+        }
+
+        // Generate ArrayList<String> of emails of all coOwners from instructorsLogic.getCoOwnersForCourse
+        List<String> generatedCoOwnersEmails = new ArrayList<>();
+        for (InstructorAttributes generatedCoOwner : generatedCoOwners) {
+            generatedCoOwnersEmails.add(generatedCoOwner.email);
+        }
+
+        assertTrue(coOwnersEmailsFromDataBundle.containsAll(generatedCoOwnersEmails)
+                && generatedCoOwnersEmails.containsAll(coOwnersEmailsFromDataBundle));
     }
 
 }

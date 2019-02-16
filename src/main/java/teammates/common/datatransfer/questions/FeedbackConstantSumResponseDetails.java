@@ -17,7 +17,7 @@ public class FeedbackConstantSumResponseDetails extends
     @Override
     public void extractResponseDetails(FeedbackQuestionType questionType,
                                        FeedbackQuestionDetails questionDetails, String[] answer) {
-        List<Integer> constSumAnswer = new ArrayList<Integer>();
+        List<Integer> constSumAnswer = new ArrayList<>();
         for (String answerPart : answer) {
             try {
                 constSumAnswer.add(Integer.parseInt(answerPart));
@@ -68,11 +68,11 @@ public class FeedbackConstantSumResponseDetails extends
     public String getAnswerCsv(FeedbackQuestionDetails questionDetails) {
         StringBuilder csvBuilder = new StringBuilder();
 
-        for (int i = 0; i < answers.size(); i++) {
+        for (Integer answer : answers) {
             if (!((FeedbackConstantSumQuestionDetails) questionDetails).isDistributeToRecipients()) {
                 csvBuilder.append(',');
             }
-            csvBuilder.append(answers.get(i));
+            csvBuilder.append(answer);
         }
 
         return csvBuilder.toString();

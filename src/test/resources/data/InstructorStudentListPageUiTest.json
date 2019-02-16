@@ -28,12 +28,26 @@
       "email": "instr@course4.tmt",
       "institute": "TEAMMATES Test Institute 9"
     },
+    "instructor1OfTestingSanitizationCourse": {
+      "googleId": "CSListUiT.idOfInstructor1OfTestingSanitizationCourse",
+      "name": "Instructor<script> alert('hi!'); </script>",
+      "isInstructor": true,
+      "email": "CSListUiT.instructor1@sanitization.tmt",
+      "institute": "inst<script> alert('hi!'); </script>"
+    },
     "Student3Course3": {
       "googleId": "CCSDetailsUiT.charlie.tmms",
       "name": "Charlie D",
       "isInstructor": false,
       "email": "CCSDetailsUiT.charlie.tmms@gmail.tmt",
       "institute": "TEAMMATES Test Institute 5"
+    },
+    "student1InTestingSanitizationCourse": {
+      "googleId": "CSListUiT.student1InTestingSanitizationCourse",
+      "name": "Stud1<script> alert('hi!'); </script>",
+      "isInstructor": false,
+      "email": "CSListUiT.normal@sanitization.tmt",
+      "institute": "inst<script> alert('hi!'); </script>"
     }
   },
   "courses": {
@@ -55,6 +69,12 @@
     "course4": {
       "id": "course4",
       "name": "Name of Course 4",
+      "timeZone": "UTC"
+    },
+    "testingSanitizationCourse": {
+      "createdAt": "2012-04-01T23:58:00Z",
+      "id": "CSListUiT.idOfTestingSanitizationCourse",
+      "name": "Testing<script> alert('hi!'); </script>",
       "timeZone": "UTC"
     }
   },
@@ -202,6 +222,33 @@
         "sectionLevel": {},
         "sessionLevel": {}
       }
+    },
+    "instructor1OfTestingSanitizationCourse": {
+      "googleId": "CSListUiT.idOfInstructor1OfTestingSanitizationCourse",
+      "courseId": "CSListUiT.idOfTestingSanitizationCourse",
+      "name": "Instructor<script> alert('hi!'); </script>",
+      "email": "CSListUiT.instructor1@sanitization.tmt",
+      "isArchived": false,
+      "role": "Co-owner",
+      "isDisplayedToStudents": true,
+      "displayedName": "inst'\"/><script>alert('hi!');</script>",
+      "privileges": {
+        "courseLevel": {
+          "canviewstudentinsection": true,
+          "cangivecommentinsection": true,
+          "cansubmitsessioninsection": true,
+          "canmodifysessioncommentinsection": true,
+          "canmodifycommentinsection": true,
+          "canmodifycourse": true,
+          "canviewsessioninsection": true,
+          "canmodifysession": true,
+          "canviewcommentinsection": true,
+          "canmodifystudent": true,
+          "canmodifyinstructor": true
+        },
+        "sectionLevel": {},
+        "sessionLevel": {}
+      }
     }
   },
   "students": {
@@ -256,7 +303,8 @@
       "course": "course3",
       "name": "Alice</option></td>tags and char here</div>&'\"",
       "comments": "This student's name is Alice</option></td>tags and char here</div>&'\"",
-      "team": "Team 1</td>tags and char here</div>&'\""
+      "team": "Team 1</td>tags and char here</div>&'\"",
+      "section": "None"
     },
     "Student2Course3": {
       "googleId": "",
@@ -264,7 +312,8 @@
       "course": "course3",
       "name": "Benny Charles",
       "comments": "This student's name is Benny Charles",
-      "team": "Team 1</td>tags and char here</div>&'\""
+      "team": "Team 1</td>tags and char here</div>&'\"",
+      "section": "None"
     },
     "Student3Course3": {
       "googleId": "CCSDetailsUiT.charlie.tmms",
@@ -272,7 +321,8 @@
       "course": "course3",
       "name": "Charlie D",
       "comments": "This student's name is Alice Betsy",
-      "team": "Team 2"
+      "team": "Team 2",
+      "section": "None"
     },
     "Student4Course3": {
       "googleId": "",
@@ -280,7 +330,8 @@
       "course": "course3",
       "name": "Denny Charlés",
       "comments": "This student's name is Denny Charlés",
-      "team": "Team 2"
+      "team": "Team 2",
+      "section": "None"
     },
     "Student5Course4": {
       "googleId": "",
@@ -288,12 +339,33 @@
       "course": "course4",
       "name": "Ann",
       "comments": "This student's name is Ann",
-      "team": "Team 1</td>tags and char here</div>&'\""
+      "team": "Team 1</td>tags and char here</div>&'\"",
+      "section": "None"
+    },
+    "student1InTestingSanitizationCourse": {
+      "googleId": "CSListUiT.student1InTestingSanitizationCourse",
+      "email": "CSListUiT.normal@sanitization.tmt",
+      "course": "CSListUiT.idOfTestingSanitizationCourse",
+      "name": "Stud1<script> alert('hi!'); </script>",
+      "comments": "<script> alert('hi!'); </script>",
+      "team": "Team tags&\"</td>",
+      "section": "Section'</td>"
     }
   },
   "feedbackSessions": {},
   "feedbackQuestions": {},
   "feedbackResponses": {},
   "feedbackResponseComments": {},
-  "profiles": {}
+  "profiles": {
+    "student1InTestingSanitizationCourse": {
+      "googleId": "student1InTestingSanitizationCourse",
+      "shortName": "Stud1<script> alert('hi!'); </script>",
+      "email": "weird&'@gmail.tmt",
+      "institute": "inst<script> alert('hi!'); </script>",
+      "nationality": "American",
+      "gender": "OTHER",
+      "moreInfo": "I am just a student :P<script> alert('hi!'); </script>",
+      "pictureKey": ""
+    }
+  }
 }

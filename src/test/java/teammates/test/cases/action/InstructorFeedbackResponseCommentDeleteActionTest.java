@@ -13,7 +13,7 @@ import teammates.storage.api.FeedbackResponseCommentsDb;
 import teammates.storage.api.FeedbackResponsesDb;
 import teammates.ui.controller.AjaxResult;
 import teammates.ui.controller.InstructorFeedbackResponseCommentDeleteAction;
-import teammates.ui.pagedata.InstructorFeedbackResponseCommentAjaxPageData;
+import teammates.ui.pagedata.FeedbackResponseCommentAjaxPageData;
 
 /**
  * SUT: {@link InstructorFeedbackResponseCommentDeleteAction}.
@@ -28,7 +28,7 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
     @Override
     @Test
     public void testExecuteAndPostProcess() {
-        removeAndRestoreDataBundle(dataBundle);
+        removeAndRestoreTypicalDataBundle();
 
         FeedbackQuestionsDb feedbackQuestionsDb = new FeedbackQuestionsDb();
         FeedbackResponsesDb feedbackResponsesDb = new FeedbackResponsesDb();
@@ -43,14 +43,14 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
         FeedbackResponseAttributes feedbackResponse = feedbackResponsesDb.getFeedbackResponse(feedbackQuestion.getId(),
                 giverEmail, receiverEmail);
 
-        FeedbackResponseCommentAttributes feedbackResponseComment = dataBundle.feedbackResponseComments
+        FeedbackResponseCommentAttributes feedbackResponseComment = typicalBundle.feedbackResponseComments
                 .get("comment1FromT1C1ToR1Q1S1C1");
 
         feedbackResponseComment = feedbackResponseCommentsDb.getFeedbackResponseComment(feedbackResponse.getId(),
-                feedbackResponseComment.giverEmail, feedbackResponseComment.createdAt);
+                feedbackResponseComment.commentGiver, feedbackResponseComment.createdAt);
         assertNotNull("response comment not found", feedbackResponseComment);
 
-        InstructorAttributes instructor = dataBundle.instructors.get("instructor1OfCourse1");
+        InstructorAttributes instructor = typicalBundle.instructors.get("instructor1OfCourse1");
         gaeSimulation.loginAsInstructor(instructor.googleId);
 
         ______TS("Unsuccessful case: not enough parameters");
@@ -61,7 +61,7 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
                 Const.ParamsNames.COURSE_ID, feedbackResponseComment.courseId,
                 Const.ParamsNames.FEEDBACK_SESSION_NAME, feedbackResponseComment.feedbackSessionName,
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT, "Comment to first response",
-                Const.ParamsNames.USER_ID, instructor.googleId
+                Const.ParamsNames.USER_ID, instructor.googleId,
         };
 
         verifyAssumptionFailure(submissionParams);
@@ -74,18 +74,18 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
                 Const.ParamsNames.FEEDBACK_RESPONSE_ID, feedbackResponseComment.feedbackResponseId,
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_ID, feedbackResponseComment.getId().toString(),
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT, feedbackResponseComment.commentText + " (Edited)",
-                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient"
+                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient",
         };
 
         InstructorFeedbackResponseCommentDeleteAction action = getAction(submissionParams);
         AjaxResult result = getAjaxResult(action);
 
-        InstructorFeedbackResponseCommentAjaxPageData data =
-                (InstructorFeedbackResponseCommentAjaxPageData) result.data;
+        FeedbackResponseCommentAjaxPageData data =
+                (FeedbackResponseCommentAjaxPageData) result.data;
 
         assertFalse(data.isError);
         assertNull(feedbackResponseCommentsDb.getFeedbackResponseComment(feedbackResponseComment.feedbackResponseId,
-                feedbackResponseComment.giverEmail, feedbackResponseComment.createdAt));
+                feedbackResponseComment.commentGiver, feedbackResponseComment.createdAt));
         assertEquals("", result.getStatusMessage());
 
         ______TS("Non-existent feedback response comment");
@@ -96,17 +96,17 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
                 Const.ParamsNames.FEEDBACK_RESPONSE_ID, feedbackResponseComment.feedbackResponseId,
                 // non-existent feedback response comment id
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_ID, "123123123123123",
-                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient"
+                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient",
         };
 
         action = getAction(submissionParams);
         result = getAjaxResult(action);
 
-        data = (InstructorFeedbackResponseCommentAjaxPageData) result.data;
+        data = (FeedbackResponseCommentAjaxPageData) result.data;
 
         assertFalse(data.isError);
         assertNull(feedbackResponseCommentsDb.getFeedbackResponseComment(feedbackResponseComment.feedbackResponseId,
-                feedbackResponseComment.giverEmail, feedbackResponseComment.createdAt));
+                feedbackResponseComment.commentGiver, feedbackResponseComment.createdAt));
         assertEquals("", result.getStatusMessage());
 
         ______TS("Instructor is not feedback response comment giver");
@@ -118,11 +118,12 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
                 "First feedback session", "idOfTypicalCourse1", questionNumber);
 
         giverEmail = "student2InCourse1@gmail.tmt";
+        receiverEmail = "student5InCourse1@gmail.tmt";
         feedbackResponse = feedbackResponsesDb.getFeedbackResponse(feedbackQuestion.getId(), giverEmail,
                                                                    receiverEmail);
-        feedbackResponseComment = dataBundle.feedbackResponseComments.get("comment1FromT1C1ToR1Q2S1C1");
+        feedbackResponseComment = typicalBundle.feedbackResponseComments.get("comment1FromT1C1ToR1Q2S1C1");
         feedbackResponseComment = feedbackResponseCommentsDb.getFeedbackResponseComment(feedbackResponse.getId(),
-                feedbackResponseComment.giverEmail, feedbackResponseComment.createdAt);
+                feedbackResponseComment.commentGiver, feedbackResponseComment.createdAt);
         assertNotNull("response comment not found", feedbackResponseComment);
 
         submissionParams = new String[] {
@@ -130,50 +131,50 @@ public class InstructorFeedbackResponseCommentDeleteActionTest extends BaseActio
                 Const.ParamsNames.FEEDBACK_SESSION_NAME, feedbackResponseComment.feedbackSessionName,
                 Const.ParamsNames.FEEDBACK_RESPONSE_ID, feedbackResponseComment.feedbackResponseId,
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_ID, feedbackResponseComment.getId().toString(),
-                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient"
+                Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient",
         };
 
         action = getAction(submissionParams);
         result = getAjaxResult(action);
 
-        data = (InstructorFeedbackResponseCommentAjaxPageData) result.data;
+        data = (FeedbackResponseCommentAjaxPageData) result.data;
 
         assertFalse(data.isError);
         assertNull(feedbackResponseCommentsDb.getFeedbackResponseComment(feedbackResponseComment.feedbackResponseId,
-                feedbackResponseComment.giverEmail, feedbackResponseComment.createdAt));
+                feedbackResponseComment.commentGiver, feedbackResponseComment.createdAt));
         assertEquals("", result.getStatusMessage());
     }
 
     @Override
     protected InstructorFeedbackResponseCommentDeleteAction getAction(String... params) {
-        return (InstructorFeedbackResponseCommentDeleteAction) gaeSimulation.getActionObject(getActionUri(), params);
+        return (InstructorFeedbackResponseCommentDeleteAction) gaeSimulation.getLegacyActionObject(getActionUri(), params);
     }
 
     @Override
     @Test
     protected void testAccessControl() throws Exception {
-        final FeedbackQuestionsDb fqDb = new FeedbackQuestionsDb();
-        final FeedbackResponsesDb frDb = new FeedbackResponsesDb();
-        final FeedbackResponseCommentsDb frcDb = new FeedbackResponseCommentsDb();
+        FeedbackQuestionsDb fqDb = new FeedbackQuestionsDb();
+        FeedbackResponsesDb frDb = new FeedbackResponsesDb();
+        FeedbackResponseCommentsDb frcDb = new FeedbackResponseCommentsDb();
 
         int questionNumber = 2;
-        FeedbackSessionAttributes fs = dataBundle.feedbackSessions.get("session1InCourse1");
-        FeedbackResponseCommentAttributes comment = dataBundle.feedbackResponseComments.get("comment1FromT1C1ToR1Q2S1C1");
-        FeedbackResponseAttributes response = dataBundle.feedbackResponses.get("response1ForQ2S1C1");
+        FeedbackSessionAttributes fs = typicalBundle.feedbackSessions.get("session1InCourse1");
+        FeedbackResponseCommentAttributes comment = typicalBundle.feedbackResponseComments.get("comment1FromT1C1ToR1Q2S1C1");
+        FeedbackResponseAttributes response = typicalBundle.feedbackResponses.get("response1ForQ2S1C1");
 
         FeedbackQuestionAttributes question = fqDb.getFeedbackQuestion(
                 fs.getFeedbackSessionName(), fs.getCourseId(), questionNumber);
         response = frDb.getFeedbackResponse(question.getId(), response.giver, response.recipient);
-        comment = frcDb.getFeedbackResponseComment(response.getId(), comment.giverEmail, comment.createdAt);
+        comment = frcDb.getFeedbackResponseComment(response.getId(), comment.commentGiver, comment.createdAt);
         comment.feedbackResponseId = response.getId();
 
-        String[] submissionParams = new String[]{
+        String[] submissionParams = new String[] {
                 Const.ParamsNames.COURSE_ID, fs.getCourseId(),
                 Const.ParamsNames.FEEDBACK_SESSION_NAME, fs.getFeedbackSessionName(),
                 Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT, "",
                 Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE, "recipient",
                 Const.ParamsNames.FEEDBACK_RESPONSE_ID, response.getId(),
-                Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_ID, String.valueOf(comment.getId())
+                Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_ID, String.valueOf(comment.getId()),
         };
         verifyUnaccessibleWithoutSubmitSessionInSectionsPrivilege(submissionParams);
 

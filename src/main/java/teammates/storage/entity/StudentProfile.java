@@ -1,73 +1,55 @@
 package teammates.storage.entity;
 
-import java.util.Date;
-
-import javax.jdo.annotations.Extension;
-import javax.jdo.annotations.IdGeneratorStrategy;
-import javax.jdo.annotations.NotPersistent;
-import javax.jdo.annotations.PersistenceCapable;
-import javax.jdo.annotations.Persistent;
-import javax.jdo.annotations.PrimaryKey;
+import java.time.Instant;
 
 import com.google.appengine.api.blobstore.BlobKey;
 import com.google.appengine.api.datastore.Text;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.annotation.Parent;
+import com.googlecode.objectify.annotation.Translate;
+import com.googlecode.objectify.annotation.Unindex;
 
 /**
  * Represents profile details for student entities associated with an
  * account entity.
  */
-@PersistenceCapable
-public class StudentProfile extends Entity {
+@Entity
+@Unindex
+public class StudentProfile extends BaseEntity {
 
-    /**
-     * The name of the primary key of this entity type.
-     */
-    @NotPersistent
-    public static final String PRIMARY_KEY_NAME = getFieldWithPrimaryKeyAnnotation(StudentProfile.class);
+    @Parent
+    private Key<Account> account; // NOPMD - specifies parent as Account; used by Objectify
 
-    // PMD.UnusedPrivateField is suppressed as profileId is persisted to the database
-    @SuppressWarnings("PMD.UnusedPrivateField")
-    @PrimaryKey
-    @Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
-    @Extension(vendorName = "datanucleus", key = "gae.encoded-pk", value = "true")
-    private String profileId;
-
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.pk-name", value = "true")
+    @Id
     private String googleId;
 
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private String shortName;
 
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private String email;
 
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private String institute;
 
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private String nationality;
 
-    @Persistent
     /* only accepts "male", "female" or "other" */
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private String gender;
 
-    @Persistent
-    /* must be html sanitized before saving */
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
+    @Unindex
     private Text moreInfo;
 
-    @Persistent
-    @Extension(vendorName = "datanucleus", key = "gae.unindexed", value = "true")
     private BlobKey pictureKey;
 
-    @Persistent
-    private Date modifiedDate;
+    @Index
+    @Translate(InstantTranslatorFactory.class)
+    private Instant modifiedDate;
+
+    @SuppressWarnings("unused")
+    private StudentProfile() {
+        // required by Objectify
+    }
 
     /**
      * Instantiates a new account.
@@ -90,7 +72,7 @@ public class StudentProfile extends Entity {
      *            Miscellaneous information, including external profile
      */
     public StudentProfile(String googleId, String shortName, String email, String institute,
-                          String nationality, String gender, Text moreInfo, BlobKey pictureKey) {
+                          String nationality, String gender, String moreInfo, BlobKey pictureKey) {
         this.setGoogleId(googleId);
         this.setShortName(shortName);
         this.setEmail(email);
@@ -98,7 +80,7 @@ public class StudentProfile extends Entity {
         this.setNationality(nationality);
         this.setGender(gender);
         this.setMoreInfo(moreInfo);
-        this.setModifiedDate(new Date());
+        this.setModifiedDate(Instant.now());
         this.setPictureKey(pictureKey);
     }
 
@@ -109,9 +91,9 @@ public class StudentProfile extends Entity {
         this.setInstitute("");
         this.setNationality("");
         this.setGender("other");
-        this.setMoreInfo(new Text(""));
+        this.setMoreInfo("");
         this.setPictureKey(new BlobKey(""));
-        this.setModifiedDate(new Date());
+        this.setModifiedDate(Instant.now());
     }
 
     public String getGoogleId() {
@@ -120,6 +102,7 @@ public class StudentProfile extends Entity {
 
     public void setGoogleId(String googleId) {
         this.googleId = googleId;
+        this.account = Key.create(Account.class, googleId);
     }
 
     public String getShortName() {
@@ -162,12 +145,12 @@ public class StudentProfile extends Entity {
         this.gender = gender;
     }
 
-    public Text getMoreInfo() {
-        return this.moreInfo;
+    public String getMoreInfo() {
+        return this.moreInfo == null ? null : this.moreInfo.getValue();
     }
 
-    public void setMoreInfo(Text moreInfo) {
-        this.moreInfo = moreInfo;
+    public void setMoreInfo(String moreInfo) {
+        this.moreInfo = moreInfo == null ? null : new Text(moreInfo);
     }
 
     public BlobKey getPictureKey() {
@@ -178,11 +161,11 @@ public class StudentProfile extends Entity {
         this.pictureKey = pictureKey;
     }
 
-    public Date getModifiedDate() {
+    public Instant getModifiedDate() {
         return this.modifiedDate;
     }
 
-    public void setModifiedDate(Date modifiedDate) {
+    public void setModifiedDate(Instant modifiedDate) {
         this.modifiedDate = modifiedDate;
     }
 

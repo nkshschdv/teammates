@@ -1,17 +1,16 @@
 package teammates.test.pageobjects;
 
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertTrue;
-import static org.testng.AssertJUnit.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 
 import teammates.common.util.ThreadHelper;
+import teammates.e2e.pageobjects.Browser;
 
 public class InstructorStudentRecordsPage extends AppPage {
 
@@ -90,7 +89,7 @@ public class InstructorStudentRecordsPage extends AppPage {
     }
 
     public List<WebElement> getStudentFeedbackPanels() {
-        List<WebElement> webElements = new ArrayList<WebElement>();
+        List<WebElement> webElements = new ArrayList<>();
         for (WebElement e : browser.driver.findElements(By.cssSelector("div[id^='studentFeedback-']"))) {
             WebElement panel = e.findElement(By.cssSelector(".panel-collapse"));
             if (panel != null) {
@@ -119,17 +118,6 @@ public class InstructorStudentRecordsPage extends AppPage {
         click(commentRow.findElement(By.tagName("form")).findElement(By.tagName("a")));
         waitForConfirmationModalAndClickOk();
         ThreadHelper.waitFor(1500);
-    }
-
-    public void verifyRowMissing(String rowIdSuffix) {
-        try {
-            waitForAjaxLoaderGifToDisappear();
-            browser.driver.findElement(By.id("responseCommentRow" + rowIdSuffix));
-            fail("Row expected to be missing found.");
-        } catch (NoSuchElementException expected) {
-            // row expected to be missing
-            return;
-        }
     }
 
     /**

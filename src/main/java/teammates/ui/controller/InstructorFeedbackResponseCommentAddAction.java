@@ -1,9 +1,7 @@
 package teammates.ui.controller;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
-
-import com.google.appengine.api.datastore.Text;
 
 import teammates.common.datatransfer.FeedbackParticipantType;
 import teammates.common.datatransfer.FeedbackSessionResultsBundle;
@@ -11,12 +9,13 @@ import teammates.common.datatransfer.attributes.FeedbackResponseAttributes;
 import teammates.common.datatransfer.attributes.FeedbackResponseCommentAttributes;
 import teammates.common.datatransfer.attributes.FeedbackSessionAttributes;
 import teammates.common.datatransfer.attributes.InstructorAttributes;
+import teammates.common.exception.EntityAlreadyExistsException;
 import teammates.common.exception.EntityDoesNotExistException;
 import teammates.common.exception.InvalidParametersException;
 import teammates.common.util.Assumption;
 import teammates.common.util.Const;
 import teammates.common.util.StringHelper;
-import teammates.ui.pagedata.InstructorFeedbackResponseCommentAjaxPageData;
+import teammates.ui.pagedata.FeedbackResponseCommentAjaxPageData;
 
 /**
  * Action: Create a new {@link FeedbackResponseCommentAttributes}.
@@ -40,15 +39,14 @@ public class InstructorFeedbackResponseCommentAddAction extends Action {
         FeedbackSessionAttributes session = logic.getFeedbackSession(feedbackSessionName, courseId);
         FeedbackResponseAttributes response = logic.getFeedbackResponse(feedbackResponseId);
         Assumption.assertNotNull(response);
-        boolean isCreatorOnly = true;
 
-        gateKeeper.verifyAccessible(instructor, session, !isCreatorOnly, response.giverSection,
+        gateKeeper.verifyAccessible(instructor, session, response.giverSection,
                 Const.ParamsNames.INSTRUCTOR_PERMISSION_SUBMIT_SESSION_IN_SECTIONS);
-        gateKeeper.verifyAccessible(instructor, session, !isCreatorOnly, response.recipientSection,
+        gateKeeper.verifyAccessible(instructor, session, response.recipientSection,
                 Const.ParamsNames.INSTRUCTOR_PERMISSION_SUBMIT_SESSION_IN_SECTIONS);
 
-        InstructorFeedbackResponseCommentAjaxPageData data =
-                new InstructorFeedbackResponseCommentAjaxPageData(account, sessionToken);
+        FeedbackResponseCommentAjaxPageData data =
+                new FeedbackResponseCommentAjaxPageData(account, sessionToken);
 
         String giverEmail = response.giver;
         String recipientEmail = response.recipient;
@@ -72,21 +70,29 @@ public class InstructorFeedbackResponseCommentAddAction extends Action {
             return createAjaxResult(data);
         }
 
-        FeedbackResponseCommentAttributes feedbackResponseComment = new FeedbackResponseCommentAttributes(courseId,
-                feedbackSessionName, feedbackQuestionId, instructor.email, feedbackResponseId, new Date(),
-                new Text(commentText), response.giverSection, response.recipientSection);
+        FeedbackResponseCommentAttributes feedbackResponseComment = FeedbackResponseCommentAttributes
+                .builder(courseId, feedbackSessionName, instructor.email, commentText)
+                .withFeedbackQuestionId(feedbackQuestionId)
+                .withFeedbackResponseId(feedbackResponseId)
+                .withCreatedAt(Instant.now())
+                .withGiverSection(response.giverSection)
+                .withReceiverSection(response.recipientSection)
+                .withCommentFromFeedbackParticipant(false)
+                .withCommentGiverType(FeedbackParticipantType.INSTRUCTORS)
+                .withVisibilityFollowingFeedbackQuestion(false)
+                .build();
 
-        //Set up visibility settings
+        // Set up visibility settings
         String showCommentTo = getRequestParamValue(Const.ParamsNames.RESPONSE_COMMENTS_SHOWCOMMENTSTO);
         String showGiverNameTo = getRequestParamValue(Const.ParamsNames.RESPONSE_COMMENTS_SHOWGIVERTO);
-        feedbackResponseComment.showCommentTo = new ArrayList<FeedbackParticipantType>();
+        feedbackResponseComment.showCommentTo = new ArrayList<>();
         if (showCommentTo != null && !showCommentTo.isEmpty()) {
             String[] showCommentToArray = showCommentTo.split(",");
             for (String viewer : showCommentToArray) {
                 feedbackResponseComment.showCommentTo.add(FeedbackParticipantType.valueOf(viewer.trim()));
             }
         }
-        feedbackResponseComment.showGiverNameTo = new ArrayList<FeedbackParticipantType>();
+        feedbackResponseComment.showGiverNameTo = new ArrayList<>();
         if (showGiverNameTo != null && !showGiverNameTo.isEmpty()) {
             String[] showGiverNameToArray = showGiverNameTo.split(",");
             for (String viewer : showGiverNameToArray) {
@@ -94,11 +100,11 @@ public class InstructorFeedbackResponseCommentAddAction extends Action {
             }
         }
 
-        FeedbackResponseCommentAttributes createdComment = new FeedbackResponseCommentAttributes();
+        FeedbackResponseCommentAttributes createdComment = null;
         try {
             createdComment = logic.createFeedbackResponseComment(feedbackResponseComment);
             logic.putDocument(createdComment);
-        } catch (InvalidParametersException e) {
+        } catch (InvalidParametersException | EntityAlreadyExistsException e) {
             setStatusForException(e);
             data.errorMessage = e.getMessage();
             data.isError = true;
@@ -109,15 +115,24 @@ public class InstructorFeedbackResponseCommentAddAction extends Action {
                            + "Adding comment to response: " + feedbackResponseComment.feedbackResponseId + "<br>"
                            + "in course/feedback session: " + feedbackResponseComment.courseId + "/"
                            + feedbackResponseComment.feedbackSessionName + "<br>"
-                           + "by: " + feedbackResponseComment.giverEmail + " at "
+                           + "by: " + feedbackResponseComment.commentGiver + " at "
                            + feedbackResponseComment.createdAt + "<br>"
-                           + "comment text: " + feedbackResponseComment.commentText.getValue();
+                           + "comment text: " + feedbackResponseComment.commentText;
+        }
+
+        if (createdComment == null) {
+            data.showCommentToString = "";
+            data.showGiverNameToString = "";
+        } else {
+            data.showCommentToString = StringHelper.toString(createdComment.showCommentTo, ",");
+            data.showGiverNameToString = StringHelper.toString(createdComment.showGiverNameTo, ",");
         }
 
         data.comment = createdComment;
         data.commentId = commentId;
-        data.showCommentToString = StringHelper.toString(createdComment.showCommentTo, ",");
-        data.showGiverNameToString = StringHelper.toString(createdComment.showGiverNameTo, ",");
+        data.commentGiverNameToEmailTable = bundle.commentGiverEmailToNameTable;
+        data.question = logic.getFeedbackQuestion(feedbackQuestionId);
+        data.sessionTimeZone = session.getTimeZone();
 
         return createShowPageResult(Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESPONSE_COMMENTS_ADD, data);
     }

@@ -10,12 +10,13 @@ import org.testng.annotations.Test;
 
 import teammates.common.util.AppUrl;
 import teammates.common.util.Const;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
 import teammates.test.pageobjects.AdminSessionsPage;
 
 /**
  * SUT: {@link Const.ActionURIs#ADMIN_SESSIONS_PAGE}.
  */
-public class AdminSessionsPageUiTest extends BaseUiTestCase {
+public class AdminSessionsPageUiTest extends BaseE2ETestCase {
     private AdminSessionsPage sessionsPage;
 
     @Override
@@ -37,7 +38,7 @@ public class AdminSessionsPageUiTest extends BaseUiTestCase {
 
         ______TS("content: typical page");
 
-        AppUrl sessionsUrl = createUrl(Const.ActionURIs.ADMIN_SESSIONS_PAGE);
+        AppUrl sessionsUrl = createUrl(Const.WebPageURIs.ADMIN_SESSIONS_PAGE);
         sessionsPage = loginAdminToPage(sessionsUrl, AdminSessionsPage.class);
         By timeFramePanel = By.id("timeFramePanel");
         sessionsPage.waitForElementToDisappear(timeFramePanel);
@@ -64,8 +65,8 @@ public class AdminSessionsPageUiTest extends BaseUiTestCase {
      * It does not test for the table content
      */
     private boolean isSessionDataDisplayCorrect() {
-        if (sessionsPage.isElementPresent(By.className("dataTable"))) {
-            int numSessionDataTables = browser.driver.findElements(By.className("dataTable")).size();
+        if (sessionsPage.isElementPresent(By.className("data-table"))) {
+            int numSessionDataTables = browser.driver.findElements(By.className("data-table")).size();
             for (int i = 0; i < numSessionDataTables; i++) {
                 if (!isSessionTableHeaderCorrect(i)) {
                     return false;
@@ -73,7 +74,7 @@ public class AdminSessionsPageUiTest extends BaseUiTestCase {
             }
             return true;
         }
-        sessionsPage.verifyStatus("Currently No Ongoing Sessions");
+        sessionsPage.waitForTextsForAllStatusMessagesToUserEquals("Currently No Ongoing Sessions");
         return true;
 
     }
@@ -89,7 +90,7 @@ public class AdminSessionsPageUiTest extends BaseUiTestCase {
                                                                "Start Time ",
                                                                "End Time ",
                                                                "Creator");
-        List<String> actualSessionTableHeaders = new ArrayList<String>();
+        List<String> actualSessionTableHeaders = new ArrayList<>();
         for (int i = 0; i < numColumns; i++) {
             actualSessionTableHeaders.add(sessionsPage.getHeaderValueFromDataTable(tableNum, 0, i));
         }

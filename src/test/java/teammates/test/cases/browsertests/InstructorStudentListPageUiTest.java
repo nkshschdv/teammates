@@ -12,10 +12,11 @@ import teammates.common.util.Const;
 import teammates.common.util.JsonUtils;
 import teammates.common.util.StringHelper;
 import teammates.common.util.ThreadHelper;
-import teammates.test.driver.BackDoor;
+import teammates.e2e.cases.e2e.BaseE2ETestCase;
+import teammates.e2e.util.BackDoor;
+import teammates.e2e.util.Priority;
+import teammates.e2e.util.TestProperties;
 import teammates.test.driver.FileHelper;
-import teammates.test.driver.Priority;
-import teammates.test.driver.TestProperties;
 import teammates.test.pageobjects.InstructorCourseDetailsPage;
 import teammates.test.pageobjects.InstructorCourseEnrollPage;
 import teammates.test.pageobjects.InstructorCourseStudentDetailsEditPage;
@@ -27,7 +28,7 @@ import teammates.test.pageobjects.InstructorStudentRecordsPage;
  * SUT: {@link Const.ActionURIs#INSTRUCTOR_STUDENT_LIST_PAGE}.
  */
 @Priority(-1)
-public class InstructorStudentListPageUiTest extends BaseUiTestCase {
+public class InstructorStudentListPageUiTest extends BaseE2ETestCase {
     private InstructorStudentListPage viewPage;
 
     @Override
@@ -137,6 +138,15 @@ public class InstructorStudentListPageUiTest extends BaseUiTestCase {
 
         viewPage = loginAdminToPage(viewPageUrl, InstructorStudentListPage.class);
         viewPage.verifyHtmlMainContent("/instructorStudentListPageNoCourse.html");
+
+        ______TS("content: data required sanitization");
+
+        instructorId = testData.accounts.get("instructor1OfTestingSanitizationCourse").googleId;
+
+        viewPageUrl = createUrl(Const.ActionURIs.INSTRUCTOR_STUDENT_LIST_PAGE).withUserId(instructorId);
+
+        viewPage = loginAdminToPage(viewPageUrl, InstructorStudentListPage.class);
+        viewPage.verifyHtmlMainContent("/instructorStudentListPageTestingSanitization.html");
     }
 
     private void testShowPhoto() throws Exception {
@@ -252,7 +262,7 @@ public class InstructorStudentListPageUiTest extends BaseUiTestCase {
         String expectedStatus = "The student has been removed from the course";
         viewPage.clickDeleteAndConfirm(courseId, studentName);
         InstructorCourseDetailsPage courseDetailsPage = viewPage.changePageType(InstructorCourseDetailsPage.class);
-        courseDetailsPage.verifyStatus(expectedStatus);
+        courseDetailsPage.waitForTextsForAllStatusMessagesToUserEquals(expectedStatus);
     }
 
     private void testSearchScript() {

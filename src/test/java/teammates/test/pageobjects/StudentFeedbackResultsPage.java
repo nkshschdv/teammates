@@ -3,6 +3,8 @@ package teammates.test.pageobjects;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
+import teammates.e2e.pageobjects.Browser;
+
 public class StudentFeedbackResultsPage extends AppPage {
 
     public StudentFeedbackResultsPage(Browser browser) {
@@ -11,7 +13,7 @@ public class StudentFeedbackResultsPage extends AppPage {
 
     @Override
     protected boolean containsExpectedPageContents() {
-        return getPageSource().contains("<h1>Feedback Results - Student</h1>");
+        return getPageSource().contains("<h1>Feedback Results</h1>");
     }
 
     public void clickQuestionAdditionalInfoButton(int qnNumber, String additionalInfoId) {

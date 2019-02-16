@@ -25,16 +25,15 @@ public class InstructorStudentListAjaxPageData extends PageData {
         this.courseId = courseId;
         this.courseIndex = courseIndex;
         this.hasSection = hasSection;
-        List<StudentListSectionData> sectionsDetails =
-                                        new ArrayList<StudentListSectionData>();
+        List<StudentListSectionData> sectionsDetails = new ArrayList<>();
         for (SectionDetailsBundle section : sections) {
             boolean isAllowedToViewStudentInSection = sectionPrivileges.get(section.name)
                                             .get(Const.ParamsNames.INSTRUCTOR_PERMISSION_VIEW_STUDENT_IN_SECTIONS);
             boolean isAllowedToModifyStudent = sectionPrivileges.get(section.name)
                                             .get(Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_STUDENT);
             sectionsDetails.add(new StudentListSectionData(section, isAllowedToViewStudentInSection,
-                                                           isAllowedToModifyStudent,
-                                                           emailPhotoUrlMapping, account.googleId, getSessionToken()));
+                    isAllowedToModifyStudent, emailPhotoUrlMapping, account.googleId, getSessionToken(),
+                    "instructorStudentListPage"));
         }
         this.sections = sectionsDetails;
     }

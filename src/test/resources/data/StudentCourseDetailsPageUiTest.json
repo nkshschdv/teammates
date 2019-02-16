@@ -34,12 +34,32 @@
       "isInstructor": false,
       "email": "SCDetailsUiT.danny@gmail.tmt",
       "institute": "TEAMMATES Test Institute 1"
+    },
+    "SCDetailsUiT.instructor1fTSCourse": {
+      "googleId": "SCDetailsUiT.idOfInstructor1OfTSCourse",
+      "name": "Instructor<script> alert('hi!'); </script>",
+      "isInstructor": true,
+      "email": "SCDetailsUiT.instructor1@sanitization.tmt",
+      "institute": "inst<script> alert('hi!'); </script>"
+    },
+    "SCDetailsUiT.student1InTSCourse": {
+      "googleId": "SCDetailsUiT.student1InTSCourse",
+      "name": "Stud1<script> alert('hi!'); </script>",
+      "isInstructor": false,
+      "email": "SCDetailsUiT.normal@sanitization.tmt",
+      "institute": "inst<script> alert('hi!'); </script>"
     }
   },
   "courses": {
     "SCDetailsUiT.CS2104": {
       "id": "SCDetailsUiT.CS2104",
       "name": "Programming Language Concepts",
+      "timeZone": "UTC"
+    },
+    "SCDetailsUiT.TSCourse": {
+      "createdAt": "2012-04-01T23:58:00Z",
+      "id": "SCDetailsUiT.idOfTSCourse",
+      "name": "Testing<script> alert('hi!'); </script>",
       "timeZone": "UTC"
     }
   },
@@ -89,6 +109,33 @@
         "sectionLevel": {},
         "sessionLevel": {}
       }
+    },
+    "SCDetailsUiT.instructor1OfTSCourse": {
+      "googleId": "SCDetailsUiT.idOfInstructor1OfTSCourse",
+      "courseId": "SCDetailsUiT.idOfTSCourse",
+      "name": "Instructor<script> alert('hi!'); </script>",
+      "email": "SCDetailsUiT.instructor1@sanitization.tmt",
+      "isArchived": false,
+      "role": "Co-owner",
+      "isDisplayedToStudents": true,
+      "displayedName": "inst'\"/><script>alert('hi!');</script>",
+      "privileges": {
+        "courseLevel": {
+          "canviewstudentinsection": true,
+          "cangivecommentinsection": true,
+          "cansubmitsessioninsection": true,
+          "canmodifysessioncommentinsection": true,
+          "canmodifycommentinsection": true,
+          "canmodifycourse": true,
+          "canviewsessioninsection": true,
+          "canmodifysession": true,
+          "canviewcommentinsection": true,
+          "canmodifystudent": true,
+          "canmodifyinstructor": true
+        },
+        "sectionLevel": {},
+        "sessionLevel": {}
+      }
     }
   },
   "students": {
@@ -98,7 +145,8 @@
       "course": "SCDetailsUiT.CS2104",
       "name": "Alice Betsy</option></td></div>'\"",
       "comments": "This student's name is Alice Betsy</option></td></div>'\"",
-      "team": "Team 1</td></div>'\""
+      "team": "Team 1</td></div>'\"",
+      "section": "None"
     },
     "SCDetailsUiT.benny": {
       "googleId": "SCDetailsUiT.benny",
@@ -106,7 +154,8 @@
       "course": "SCDetailsUiT.CS2104",
       "name": "Benny Charles",
       "comments": "This student's name is Benny Charles",
-      "team": "Team 1</td></div>'\""
+      "team": "Team 1</td></div>'\"",
+      "section": "None"
     },
     "SCDetailsUiT.charlie": {
       "googleId": "SCDetailsUiT.charlie",
@@ -114,12 +163,33 @@
       "course": "SCDetailsUiT.CS2104",
       "name": "Charlie Davis",
       "comments": "This student's name is Charlie Davis",
-      "team": "Team 2"
+      "team": "Team 2",
+      "section": "None"
+    },
+    "SCDetailsUiT.student1InTSCourse": {
+      "googleId": "SCDetailsUiT.student1InTSCourse",
+      "email": "SCDetailsUiT.normal@sanitization.tmt",
+      "course": "SCDetailsUiT.idOfTSCourse",
+      "name": "Stud1<script> alert('hi!'); </script>",
+      "comments": "<script> alert('hi!'); </script>",
+      "team": "Team tags&\"</td>",
+      "section": "Section'</td>"
     }
   },
   "feedbackSessions": {},
   "feedbackQuestions": {},
   "feedbackResponses": {},
   "feedbackResponseComments": {},
-  "profiles": {}
+  "profiles": {
+    "SCDetailsUiT.student1InTSCourse": {
+      "googleId": "student1InTestingSanitizationCourse",
+      "shortName": "Stud1<script> alert('hi!'); </script>",
+      "email": "weird&'@gmail.tmt",
+      "institute": "inst<script> alert('hi!'); </script>",
+      "nationality": "American",
+      "gender": "OTHER",
+      "moreInfo": "I am just a student :P<script> alert('hi!'); </script>",
+      "pictureKey": ""
+    }
+  }
 }

@@ -1,6 +1,8 @@
 package teammates.common.datatransfer.questions;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import teammates.common.datatransfer.FeedbackSessionResultsBundle;
@@ -67,15 +69,15 @@ public class FeedbackContributionResponseDetails extends FeedbackResponseDetails
     }
 
     @Override
-    public String getAnswerHtml(FeedbackResponseAttributes response, FeedbackQuestionAttributes question,
-                                FeedbackSessionResultsBundle feedbackSessionResultsBundle) {
-        return getContributionQuestionResponseAnswerHtml(response, question, feedbackSessionResultsBundle);
-    }
-
-    @Override
     public String getAnswerCsv(FeedbackResponseAttributes response, FeedbackQuestionAttributes question,
                                FeedbackSessionResultsBundle feedbackSessionResultsBundle) {
         return getContributionQuestionResponseAnswerCsv(response, question, feedbackSessionResultsBundle);
+    }
+
+    @Override
+    public String getAnswerHtml(FeedbackResponseAttributes response, FeedbackQuestionAttributes question,
+                                FeedbackSessionResultsBundle feedbackSessionResultsBundle) {
+        return getContributionQuestionResponseAnswerHtml(response, question, feedbackSessionResultsBundle);
     }
 
     private void setAnswer(int answer) {
@@ -183,28 +185,21 @@ public class FeedbackContributionResponseDetails extends FeedbackResponseDetails
     // TODO: check if this can be made non-static
     public static Map<String, StudentResultSummary> getContribQnStudentResultSummary(FeedbackQuestionAttributes question,
             FeedbackSessionResultsBundle feedbackSessionResultsBundle) {
-        Map<String, StudentResultSummary> contribQnStats =
-                feedbackSessionResultsBundle.contributionQuestionStudentResultSummary.get(question.getId());
-        if (contribQnStats == null) {
-            FeedbackContributionQuestionDetails fqcd = (FeedbackContributionQuestionDetails) question.getQuestionDetails();
-            contribQnStats = fqcd.getStudentResults(feedbackSessionResultsBundle, question);
 
-            //Convert email to anonEmail and add stats.
-            Map<String, StudentResultSummary> anonContribQnStats = new HashMap<String, StudentResultSummary>();
-            for (Map.Entry<String, StudentResultSummary> entry : contribQnStats.entrySet()) {
-                anonContribQnStats.put(
-                        feedbackSessionResultsBundle.getAnonEmailFromStudentEmail(entry.getKey()), entry.getValue());
-            }
-            for (Map.Entry<String, StudentResultSummary> entry : anonContribQnStats.entrySet()) {
-                if (contribQnStats.get(entry.getKey()) == null) {
-                    contribQnStats.put(entry.getKey(), entry.getValue());
+        return feedbackSessionResultsBundle.contributionQuestionStudentResultSummary.computeIfAbsent(
+                question.getId(), key -> {
+                    FeedbackContributionQuestionDetails fqcd =
+                            (FeedbackContributionQuestionDetails) question.getQuestionDetails();
+                    Map<String, StudentResultSummary> contribQnStats =
+                            fqcd.getStudentResults(feedbackSessionResultsBundle, question);
+
+                    new HashMap<>(contribQnStats).forEach((contribQnStatsKey, value) -> contribQnStats.putIfAbsent(
+                            feedbackSessionResultsBundle.getAnonEmailFromStudentEmail(contribQnStatsKey), value));
+
+                    return contribQnStats;
                 }
-            }
+        );
 
-            feedbackSessionResultsBundle.contributionQuestionStudentResultSummary.put(question.getId(), contribQnStats);
-        }
-
-        return contribQnStats;
     }
 
     public Map<String, TeamEvalResult> getContribQnTeamEvalResult(FeedbackQuestionAttributes question,
@@ -218,5 +213,25 @@ public class FeedbackContributionResponseDetails extends FeedbackResponseDetails
         }
 
         return contribQnStats;
+    }
+
+    @Override
+    public List<String> validateResponseDetails(FeedbackQuestionAttributes correspondingQuestion) {
+        List<String> errors = new ArrayList<>();
+        boolean validAnswer = false;
+
+        // Valid answers: 0, 10, 20, .... 190, 200
+        boolean isValidRange = answer >= 0 && answer <= 200;
+        boolean isMultipleOf10 = answer % 10 == 0;
+        if (isValidRange && isMultipleOf10) {
+            validAnswer = true;
+        }
+        if (answer == Const.POINTS_NOT_SURE || answer == Const.POINTS_NOT_SUBMITTED) {
+            validAnswer = true;
+        }
+        if (!validAnswer) {
+            errors.add(Const.FeedbackQuestion.CONTRIB_ERROR_INVALID_OPTION);
+        }
+        return errors;
     }
 }

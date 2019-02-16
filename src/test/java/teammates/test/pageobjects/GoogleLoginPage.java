@@ -4,11 +4,20 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+
+import com.google.common.base.Preconditions;
+
+import teammates.e2e.pageobjects.Browser;
+import teammates.e2e.util.TestProperties;
 
 public class GoogleLoginPage extends LoginPage {
 
-    private static final String EXPECTED_SNIPPET_SIGN_IN = "Sign in - Google Accounts";
+    private static final String EXPECTED_SNIPPET_SIGN_IN = "Sign in – Google accounts";
     private static final String EXPECTED_SNIPPET_APPROVAL = "requesting permission to access your Google Account";
+
+    @FindBy(id = "initialView")
+    private WebElement loginPanel;
 
     @FindBy(id = "identifierId")
     private WebElement identifierTextBox;
@@ -16,7 +25,7 @@ public class GoogleLoginPage extends LoginPage {
     @FindBy(id = "identifierNext")
     private WebElement identifierNextButton;
 
-    @FindBy(css = "#password input[type=password]")
+    @FindBy(css = "input[type=password]")
     private WebElement passwordTextBox;
 
     @FindBy(id = "passwordNext")
@@ -33,9 +42,14 @@ public class GoogleLoginPage extends LoginPage {
 
     @Override
     public InstructorHomePage loginAsInstructor(String username, String password) {
+        return loginAsInstructor(username, password, InstructorHomePage.class);
+    }
+
+    @Override
+    public <T extends AppPage> T loginAsInstructor(String username, String password, Class<T> typeOfPage) {
         completeGoogleLoginSteps(username, password);
         browser.isAdminLoggedIn = false;
-        return changePageType(InstructorHomePage.class);
+        return changePageType(typeOfPage);
     }
 
     @Override
@@ -84,31 +98,32 @@ public class GoogleLoginPage extends LoginPage {
         waitForRedirectIfAny();
         boolean isPageRequestingAccessApproval = getPageSource().contains(EXPECTED_SNIPPET_APPROVAL);
         if (isPageRequestingAccessApproval) {
-            click(By.id("persist_checkbox"));
+            markCheckBoxAsChecked(browser.driver.findElement(By.id("persist_checkbox")));
             click(By.id("approve_button"));
             waitForPageToLoad();
         }
     }
 
     private void waitForRedirectIfAny() {
-        By metaRefreshBy = By.cssSelector("meta[http-equiv='refresh']");
-        if (isElementPresent(metaRefreshBy)) {
-            waitForElementToDisappear(metaRefreshBy);
-            waitForPageToLoad();
-        }
+        String loginRedirectUrl = TestProperties.TEAMMATES_URL + "/_ah/conflogin";
+        waitFor(d -> {
+            String url = Preconditions.checkNotNull(d).getCurrentUrl();
+            boolean isTeammatesPage = url.startsWith(TestProperties.TEAMMATES_URL) && !url.startsWith(loginRedirectUrl);
+            boolean isApprovalPage = d.getPageSource().contains(EXPECTED_SNIPPET_APPROVAL);
+            return isTeammatesPage || isApprovalPage;
+        });
+    }
 
-        By noScriptBy = By.tagName("noscript");
-        if (isElementPresent(noScriptBy)) {
-            waitForTextContainedInElementAbsence(noScriptBy, "&lt;meta http-equiv=\"refresh\"");
-            waitForPageToLoad();
-        }
+    private void waitForLoginPanelAnimationToComplete() {
+        // the login panel will have attribute `aria-busy="true"` while in animation
+        waitFor(ExpectedConditions.attributeToBe(loginPanel, "aria-busy", ""));
     }
 
     private void submitCredentials(String username, String password) {
         completeFillIdentifierSteps(username);
         click(identifierNextButton);
 
-        waitForElementVisibility(passwordTextBox);
+        waitForLoginPanelAnimationToComplete();
         fillTextBox(passwordTextBox, password);
 
         click(passwordNextButton);
@@ -116,18 +131,19 @@ public class GoogleLoginPage extends LoginPage {
     }
 
     private void completeFillIdentifierSteps(String identifier) {
-        By switchAccountButtonBy = By.cssSelector("*[aria-label='Switch account']");
-        By useAnotherAccountButtonBy = By.id("identifierLink");
+        By switchAccountButtonBy = By.cssSelector("div[aria-label='Switch account']");
+        By useAnotherAccountButtonBy = By.xpath("//div[contains(text(), 'Use another account')]");
 
         if (isElementPresent(switchAccountButtonBy)) {
             click(switchAccountButtonBy);
-            click(waitForElementPresence(useAnotherAccountButtonBy));
-
-        } else if (isElementPresent(useAnotherAccountButtonBy)) {
-            click(useAnotherAccountButtonBy);
+            waitForLoginPanelAnimationToComplete();
         }
 
-        waitForElementVisibility(identifierTextBox);
+        if (isElementPresent(useAnotherAccountButtonBy)) {
+            click(useAnotherAccountButtonBy);
+            waitForLoginPanelAnimationToComplete();
+        }
+
         fillTextBox(identifierTextBox, identifier);
     }
 
